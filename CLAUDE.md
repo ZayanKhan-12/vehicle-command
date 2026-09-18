@@ -357,3 +357,37 @@ define would let code work against the proxy and then fail against Tesla. Capabi
 has but the Fleet API lacks belong on `Vehicle`, not in the proxy's command table.
 
 Levels and named actions stay separate: do not map `vent` to a guessed percentage.
+
+## Forwarding a request is a two-part contract
+
+`ErrCommandUseRESTAPI` makes `ServeHTTP` call `forwardRequest` with the *original* `*http.Request`
+and the *same* `http.ResponseWriter`. Two invariants follow, and both were broken (issue #136):
+
+- **Nothing may be written to the `ResponseWriter` before forwarding.**
+  `loadVehicleAndCommandFromRequest` treated `ErrCommandUseRESTAPI` as an ordinary parse failure
+  and answered HTTP 400 first. `forwardRequest` then wrote a second time to the same writer, so the
+  client kept the 400 and Go logged a superfluous `WriteHeader` call.
+- **The request body must survive parameter parsing.** `extractCommandAction` did `io.ReadAll` on
+  `req.Body` without putting it back, so the forwarded request went upstream with an empty body —
+  `{"level":2}` silently became `{}`.
+
+The combination is why issue #136 reports a response that arrives empty with nothing happening on
+the vehicle, and it is why simply adding a command to the `ErrCommandUseRESTAPI` list was not
+enough to make it work.
+
+There are **three** paths into `forwardRequest`, and all three are affected:
+
+1. `isNotSupported(vin)` — a vehicle already known not to support the protocol. This one always
+   worked, because the body is never parsed.
+2. `ErrCommandUseRESTAPI` — a command with no protocol equivalent.
+3. `StartSession` returning `ErrProtocolNotSupported` — an implemented command whose vehicle turns
+   out to be too old. The body has already been parsed by then, so this one lost its parameters
+   too.
+
+Restoring the body in `extractCommandAction` fixes (2) and (3) together.
+`TestRESTFallbackDoesNotWriteAResponse` and `TestExtractCommandActionLeavesBodyReadable` cover
+them; both fail without the fix.
+
+If you add another branch that forwards, check it against both invariants. Note also that
+`forwardRequest` builds its own `http.Client{}` rather than using the account's, so a client
+injected with `account.WithClient` does not reach forwarded requests.

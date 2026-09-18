@@ -505,6 +505,11 @@ func (p *Proxy) loadVehicleAndCommandFromRequest(ctx context.Context, acct *acco
 	}
 
 	commandToExecuteFunc, err := extractCommandAction(ctx, req, command)
+	if errors.Is(err, ErrCommandUseRESTAPI) {
+		// Our caller answers this by forwarding the request unchanged, so
+		// nothing may be written to w here.
+		return nil, nil, err
+	}
 	if err != nil {
 		if errors.Is(err, ErrCommandUseRESTAPI) {
 			// Let ServeHTTP fall back to forwarding the original request.
