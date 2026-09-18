@@ -467,6 +467,11 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 
 	if err := car.StartSession(ctx); errors.Is(err, protocol.ErrProtocolNotSupported) {
 		p.markUnsupportedVIN(vin)
+		// Establishing the session may have discovered that this account belongs
+		// to a different region, in which case acct.Host now holds it. Record it
+		// before forwarding, so that the forwarded request and every later
+		// request for this subject start in the right place.
+		p.updateDomainForSubject(acct.Subject, acct.Host)
 		p.forwardRequest(acct, w, req)
 		return err
 	} else if err != nil {

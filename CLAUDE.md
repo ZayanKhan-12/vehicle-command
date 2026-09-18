@@ -391,3 +391,41 @@ them; both fail without the fix.
 If you add another branch that forwards, check it against both invariants. Note also that
 `forwardRequest` builds its own `http.Client{}` rather than using the account's, so a client
 injected with `account.WithClient` does not reach forwarded requests.
+
+## Regional routing
+
+Fleet API is regional. A request sent to the wrong regional server is answered with **HTTP 421**,
+and the correct host is named **in the JSON error body** — not in a header:
+
+```json
+{"response":null,"error":"user out of region, use base URL: https://fleet-api.prd.na.vn.cloud.tesla.com, ..."}
+```
+
+`inet.Connection.SendFleetAPICommand` parses that with `baseDomainRE` and redirects itself. That is
+the only place in the library that ever learns the truth, and issue #131 is what happens when the
+knowledge stops there:
+
+1. A signed command goes to the wrong region and is answered 421. The `Connection` corrects
+   `c.serverURL` and retries successfully.
+2. The vehicle turns out not to support the command protocol, answering 422.
+3. `handleVehicleCommand` falls back to `forwardRequest`, which uses **`acct.Host`** — still the
+   original, wrong region. The command fails.
+
+So `Connection` now reports the redirect through `inet.WithRegionHandler`, and `Account.GetVehicle`
+uses it to update `Account.Host`. The proxy then caches the corrected host against the subject
+before forwarding. Two rules for this path:
+
+- **Check the host before believing it.** `acct.Host` decides where the caller's OAuth token is
+  sent, and the redirect target arrives in a response body. `ValidTeslaDomainSuffix` gates it, and
+  `TestGetVehicleIgnoresUntrustedRedirect` asserts an outside domain is refused.
+- **The handler runs on the goroutine that made the request, before it returns.** Keep it cheap and
+  non-blocking; it is not a place to do IO.
+
+Two known gaps remain here, neither addressed:
+
+- `forwardRequest` follows only the `Alt-Svc` header on a 421, so a forwarded request that is
+  *itself* misrouted still fails. Upstream PR #462 fixes exactly that, and is complementary to the
+  propagation above rather than an alternative to it.
+- `Account.Get` and `Account.Post` call the package-level `inet.SendFleetAPICommand`, which has no
+  421 handling at all. Only `Connection.SendFleetAPICommand` redirects, so an Account whose own
+  requests are misrouted never self-corrects.
