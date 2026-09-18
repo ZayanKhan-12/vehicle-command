@@ -282,19 +282,39 @@ command must be put in the correct one:
 3. It is not a Fleet API command at all → fall through to the 400.
 
 Getting (2) wrong looks exactly like Tesla rejecting the command, which is why it went unnoticed:
-six documented commands sat in outcome (3). The fix is covered by
-`TestRESTOnlyCommandsAreForwarded`, and `TestUnknownCommandIsRejected` guards the other
-direction so it cannot be generalised into forwarding anything at all.
+seven documented commands sat in outcome (3). Six were REST-only and are now forwarded; the
+seventh, `sun_roof_control`, belonged in (1) and is implemented. `TestRESTOnlyCommandsAreForwarded`
+covers the forwarding, `TestSunRoofControl` the implementation, and `TestUnknownCommandIsRejected`
+guards the other direction so none of this can be generalised into forwarding anything at all.
+
+The proxy currently implements or forwards **every** command in that reference. If the diff below
+comes back non-empty, something has been added upstream.
 
 To re-audit after a Fleet API release, diff the [vehicle commands
 reference](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands) against the
 `case` labels in `ExtractCommandAction`.
 
-### Known remaining gap: `sun_roof_control`
+### `sun_roof_control`, and why it spans all three outcomes
 
-This one is outcome (1), not (2), and is deliberately left alone. The protocol does define
-`VehicleControlSunroofOpenCloseAction`, and it has explicit `vent`, `close` and `open` variants
-alongside `absolute_level`/`delta_level`. But `Vehicle.ChangeSunroofState` only ever sets
-`absolute_level`, so Fleet API's `state: "vent"` has nothing to call. Wiring it up needs new
-methods on `Vehicle` for the three `Void` actions first. Do not map `vent` to a guessed
-percentage.
+`VehicleControlSunroofOpenCloseAction` carries two independent oneofs: a level
+(`absolute_level`/`delta_level`) and a named action (`vent`, `close`, `open`). `ChangeSunroofState`
+only ever set the level, so the named positions had nothing to call — which is why this command sat
+unimplemented even though the protocol supported it.
+
+`Vehicle.VentSunroof`, `CloseSunroof` and `OpenSunroof` now send the action variants, matching the
+existing `VentWindows`/`CloseWindows` pair. The Fleet API's `state` parameter then maps onto all
+three outcomes at once, which makes this command the clearest illustration of the rule above:
+
+| `state` | Outcome | Why |
+| :--- | :--- | :--- |
+| `vent`, `close` | (1) implemented | The action message names them. |
+| `stop` | (2) forwarded | The Fleet API defines it; the protobuf has no `stop`. |
+| anything else | (3) rejected | Not a Fleet API state. |
+
+Note the asymmetry in the last two rows, because it is deliberate. `open` **is** in the protobuf and
+**is** exposed on `Vehicle` and in `tesla-control`, but the proxy rejects `state: "open"` rather
+than accepting it. The proxy exists to be a drop-in Fleet API, so accepting a state Tesla does not
+define would let code work against the proxy and then fail against Tesla. Capabilities the protocol
+has but the Fleet API lacks belong on `Vehicle`, not in the proxy's command table.
+
+Levels and named actions stay separate: do not map `vent` to a guessed percentage.

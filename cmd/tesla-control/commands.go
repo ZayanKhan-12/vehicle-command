@@ -988,6 +988,30 @@ var commands = map[string]*Command{
 			return car.AutoSeatAndClimate(ctx, positions, enabled)
 		},
 	},
+	"sunroof-vent": {
+		help:             "Vent the sunroof",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
+			return car.VentSunroof(ctx)
+		},
+	},
+	"sunroof-close": {
+		help:             "Close the sunroof",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
+			return car.CloseSunroof(ctx)
+		},
+	},
+	"sunroof-open": {
+		help:             "Open the sunroof",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
+			return car.OpenSunroof(ctx)
+		},
+	},
 	"windows-vent": {
 		help:             "Vent all windows",
 		requiresAuth:     true,
