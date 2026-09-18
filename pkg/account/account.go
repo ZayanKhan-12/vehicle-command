@@ -68,7 +68,32 @@ type Account struct {
 	authHeader string
 	Host       string
 	Subject    string
-	client     http.Client
+	client     *http.Client
+}
+
+// An Option modifies an Account returned by [New].
+type Option func(*Account)
+
+// WithClient makes the Account send its requests with client instead of with a
+// default [http.Client]. Vehicles returned by [Account.GetVehicle] inherit the
+// client, so a single call covers every Fleet API request the Account is
+// responsible for.
+//
+// This is the hook for behavior that lives in the transport: an
+// [http.RoundTripper] that logs or instruments requests, a proxy, a custom TLS
+// configuration, or a client-wide timeout. Previously the only way to influence
+// any of that was to modify [http.DefaultClient], which is not an option for a
+// program that also makes unrelated HTTP requests.
+//
+// The Account keeps a reference to client rather than a copy of it, so do not
+// modify client after passing it here. A nil client leaves the default in
+// place.
+func WithClient(client *http.Client) Option {
+	return func(a *Account) {
+		if client != nil {
+			a.client = client
+		}
+	}
 }
 
 // We don't parse JWTs beyond what's required to extract the API server domain name
@@ -115,8 +140,10 @@ func (p *oauthPayload) domain() string {
 }
 
 // New returns an [Account] that can be used to fetch a [vehicle.Vehicle].
-// Optional userAgent can be passed in - otherwise it will be generated from code
-func New(oauthToken, userAgent string) (*Account, error) {
+// Optional userAgent can be passed in - otherwise it will be generated from code.
+// Zero or more [Option] values may be passed to configure the Account; see
+// [WithClient].
+func New(oauthToken, userAgent string, options ...Option) (*Account, error) {
 	parts := strings.Split(oauthToken, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("client provided malformed OAuth token")
@@ -134,12 +161,17 @@ func New(oauthToken, userAgent string) (*Account, error) {
 	if domain == "" {
 		return nil, fmt.Errorf("client provided OAuth token with invalid audiences")
 	}
-	return &Account{
+	account := &Account{
 		UserAgent:  buildUserAgent(userAgent),
 		authHeader: "Bearer " + strings.TrimSpace(oauthToken),
 		Host:       domain,
 		Subject:    payload.Subject,
-	}, nil
+		client:     &http.Client{},
+	}
+	for _, option := range options {
+		option(account)
+	}
+	return account, nil
 }
 
 // GetVehicle returns the Vehicle belonging to the account with the provided vin.
@@ -150,7 +182,7 @@ func New(oauthToken, userAgent string) (*Account, error) {
 // sessions parameter may also be nil, but providing a cache.SessionCache avoids a round-trip
 // handshake with the Vehicle in subsequent connections.
 func (a *Account) GetVehicle(_ context.Context, vin string, privateKey authentication.ECDHPrivateKey, sessions *cache.SessionCache) (*vehicle.Vehicle, error) {
-	conn := inet.NewConnection(vin, a.authHeader, a.Host, a.UserAgent)
+	conn := inet.NewConnection(vin, a.authHeader, a.Host, a.UserAgent, inet.WithClient(a.client))
 	car, err := vehicle.NewVehicle(conn, privateKey, sessions)
 	if err != nil {
 		conn.Close()
@@ -193,7 +225,7 @@ func (a *Account) Get(ctx context.Context, endpoint string) ([]byte, error) {
 }
 
 func (a *Account) sendFleetAPICommand(ctx context.Context, endpoint string, command interface{}) ([]byte, error) {
-	return inet.SendFleetAPICommand(ctx, &a.client, a.UserAgent, a.authHeader, fmt.Sprintf("https://%s/%s", a.Host, endpoint), command)
+	return inet.SendFleetAPICommand(ctx, a.client, a.UserAgent, a.authHeader, fmt.Sprintf("https://%s/%s", a.Host, endpoint), command)
 }
 
 // Post sends an HTTP POST request to endpoint.
