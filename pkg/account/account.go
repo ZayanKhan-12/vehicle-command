@@ -70,6 +70,7 @@ type Account struct {
 	authHeader string
 	Host       string
 	Subject    string
+	scopes     []string
 	client     *http.Client
 
 	tokenSource oauth2.TokenSource
@@ -152,6 +153,7 @@ type oauthPayload struct {
 	Audiences []string `json:"aud"`
 	OUCode    string   `json:"ou_code"`
 	Subject   string   `json:"sub"`
+	Scopes    []string `json:"scp"`
 }
 
 var domainRegEx = regexp.MustCompile(`^[A-Za-z0-9-.]+$`) // We're mostly interested in stopping paths; the http package handles the rest.
@@ -217,6 +219,7 @@ func New(oauthToken, userAgent string, options ...Option) (*Account, error) {
 		authHeader: "Bearer " + strings.TrimSpace(oauthToken),
 		Host:       domain,
 		Subject:    payload.Subject,
+		scopes:     payload.Scopes,
 		client:     &http.Client{},
 	}
 	for _, option := range options {

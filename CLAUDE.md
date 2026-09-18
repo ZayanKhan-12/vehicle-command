@@ -158,3 +158,41 @@ The tests count tokens from there, which is why they expect `SUBJECT-2` on the f
 `go 1.18`. From v0.27.0 onwards the module requires `go 1.23.0`, which would force this module's
 `go` directive up and raise the floor for everyone who depends on it. Check that constraint before
 bumping.
+
+## OAuth scopes
+
+Tesla's consent screen lets a user approve some of the scopes an application asked for and decline
+the rest, and nothing in the redirect says which boxes were ticked. The application finds out
+later, as an HTTP 403 or 412 from an endpoint that does not name the missing permission — see
+issue #63, and issue #49, which is that failure with `user_data` specifically.
+
+**The SDK cannot fix the root cause.** "Require the user to select the correct scopes" is a
+property of Tesla's authorization server, and this repository never performs the grant:
+`tesla-auth-token` reads a token that was obtained elsewhere. What the SDK can do, and now does,
+is answer the question the issue asks next — *"what is the best way to detect the scopes they
+selected?"*
+
+`pkg/account/scopes.go` reads the token's `scp` claim and exposes it:
+
+```go
+if err := acct.RequireScopes(account.ScopeVehicleCmds, account.ScopeVehicleDeviceData); err != nil {
+    return err // names the missing scopes and how to fix them
+}
+```
+
+One rule governs this code and must not be weakened: **it fails open.** A token whose `scp` claim
+is absent reports *nothing* missing, not *everything* missing. The SDK cannot distinguish "no
+scopes granted" from "this token does not describe itself", and wrongly refusing a token that
+would have worked is a worse failure than not warning about one that will not. Tesla's servers
+remain the only authority on what a token may do; `RequireScopes` is an early warning, never an
+authorization decision. `TestScopesUnstated` pins this, and `TestScopesStatedButEmpty` pins the
+distinction from `"scp": []`, which *is* reported.
+
+That distinction is why `Scopes()` does not use `append([]string(nil), ...)` — that idiom returns
+nil for an empty slice and would quietly collapse the two cases. The comment in place says so.
+
+The scope constants and their doc comments are Tesla's own list, from
+https://developer.tesla.com/docs/fleet-api/authentication/overview. Note that the SDK does not
+ship a mapping from commands to required scopes: which scopes a given command needs is Tesla's to
+define and change, and a guess baked in here would be wrong quietly. Callers compose the set they
+need from the constants.
