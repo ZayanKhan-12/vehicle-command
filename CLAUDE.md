@@ -263,8 +263,11 @@ anyone can repeat; re-check before repeating the conclusion, because the protobu
 | Per-window control (#122) | no selector; not in `ClosureMoveRequest` | n/a | Tesla roadmap |
 | Light show (#145) | none | none | Tesla roadmap |
 | Fan speed (#154) | none — `fan_status` is reported, not settable | none | Tesla roadmap |
+| Charging phase count (#205) | none — `charger_phases` is reported, not settable | none | Tesla roadmap |
 
-Three of those five have the report-but-not-command shape, so check for it every time.
+Four of those six have the report-but-not-command shape, so check for it every time. For #205 in
+particular, `set_charging_amps` is the lever that does exist, and the issue's own commenter notes
+`charger_phases` appears to reflect what the connected charger supports rather than a setting.
 
 **Light show (#145)** asks for two things and neither exists. Scheduling a show needs the show file
 *on the car*, and light shows are loaded from USB — this protocol has no file transfer at all. The
@@ -463,3 +466,30 @@ Two known gaps remain here, neither addressed:
 - `Account.Get` and `Account.Post` call the package-level `inet.SendFleetAPICommand`, which has no
   421 handling at all. Only `Connection.SendFleetAPICommand` redirects, so an Account whose own
   requests are misrouted never self-corrects.
+
+## Only vehicle commands are interpreted
+
+`ServeHTTP` inspects exactly one shape of request: `/api/1/vehicles/{vin}/command/{name}`. That is
+the only thing that has to be signed with the application's private key. Everything else on
+`/api/1/` — energy sites, `vehicle_data`, `products`, user endpoints — is relayed with the caller's
+own OAuth token and is none of the proxy's business.
+
+This answers a recurring question rather than fixing a bug. Issue #219 asks whether utility rate
+plan data is reachable; it is, and always was, because `/api/1/energy_sites/...` never enters the
+command path. `TestNonCommandEndpointsAreForwarded` pins that down, because a future change to the
+routing could swallow those paths and break them silently — they would start returning the proxy's
+own errors instead of Tesla's data.
+
+`TestVehicleCommandPathIsNotForwardedBlindly` is its counterweight: an unrecognised *command* must
+not be relayed unsigned. The two tests together fix the boundary from both sides.
+
+## Issues that are not about this code
+
+Some bug reports here are about Tesla's backend or firmware, and no change to this repository can
+affect them. Recognise them and say so instead of looking for a fix.
+
+Issue #224 is the clearest example: `charge_energy_added` and the streaming `ACChargingEnergyIn`
+sometimes decrease while a vehicle is actively charging. The reporter's own capture shows
+`3.291 → 3.270` with `BMSState: Charge`. This SDK does not compute, smooth or cache that number —
+it is relayed from Tesla's servers — and a maintainer has labelled the issue **Fleetnet**, Tesla's
+own tag for backend problems. The useful contribution there is a better capture, not a patch.
