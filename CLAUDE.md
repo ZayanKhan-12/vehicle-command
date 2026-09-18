@@ -241,3 +241,60 @@ A collaborator's answer on the issue ("We currently do not have a roadmap for th
 the whole status: the work is Tesla's, on both counts. Do not fabricate an implementation. This
 one physically moves a vehicle, and a plausible-looking method that cannot work — or worse, a
 guessed field number aimed at a car — is far worse than an unimplemented feature.
+
+## Preconditioning, and the three things that word means here
+
+Issue #115 asks for a `set_battery_preconditioning` command with `standard`/`fast`/`off`. Applying
+the check above: there is no such action in `car_server.proto`, and no such Fleet API endpoint.
+A collaborator has filed an internal ticket, so it is a Tesla roadmap item.
+
+What makes this issue different from #114 is that the SDK *does* have preconditioning commands,
+three separate ones, and the thread visibly conflates them. Anyone answering a preconditioning
+question should keep them apart:
+
+| What the user means | What it is | SDK |
+| :--- | :--- | :--- |
+| "warm the cabin fast" | Max defrost. **Cabin, not battery** — the name misleads. | `Vehicle.SetPreconditioningMax` |
+| "be warm when I leave at 7am" | Scheduled departure preconditioning, cabin *and* battery. | `Vehicle.ScheduleDeparture`, `Vehicle.AddPreconditionSchedule` |
+| "warm the battery now, for fast charging" | **Does not exist as a command.** | — |
+
+The SDK already exposes every preconditioning action the protocol defines, so this is not a
+coverage gap in `pkg/vehicle`; it is an absent capability.
+
+The one thing that *does* precondition the battery on demand today is routing the car to a
+Supercharger, which the vehicle responds to by preheating. That is `navigation_sc_request`, a
+REST-only Fleet API command — which the proxy used to reject; see below.
+
+## Fleet API commands the proxy does not implement
+
+`ExtractCommandAction` in `pkg/proxy/command.go` maps a Fleet API command name to an action. Its
+`default` case answers **HTTP 400 `invalid_command`**, and that is the trap: a command the proxy
+does not recognise is not merely unimplemented, it is *blocked*. The request never reaches Tesla,
+even though the proxy is forwarding everything else for that vehicle.
+
+The escape hatch is `ErrCommandUseRESTAPI`. `Proxy.ServeHTTP` treats it as "forward this one
+unchanged", which is right for any command that has no representation in the signed protocol —
+usually because the vehicle is not the only participant. So there are three outcomes, and a new
+command must be put in the correct one:
+
+1. It has a `VehicleAction` → implement it, calling the `pkg/vehicle` method.
+2. It has none → `return nil, ErrCommandUseRESTAPI`, so the proxy forwards it.
+3. It is not a Fleet API command at all → fall through to the 400.
+
+Getting (2) wrong looks exactly like Tesla rejecting the command, which is why it went unnoticed:
+six documented commands sat in outcome (3). The fix is covered by
+`TestRESTOnlyCommandsAreForwarded`, and `TestUnknownCommandIsRejected` guards the other
+direction so it cannot be generalised into forwarding anything at all.
+
+To re-audit after a Fleet API release, diff the [vehicle commands
+reference](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands) against the
+`case` labels in `ExtractCommandAction`.
+
+### Known remaining gap: `sun_roof_control`
+
+This one is outcome (1), not (2), and is deliberately left alone. The protocol does define
+`VehicleControlSunroofOpenCloseAction`, and it has explicit `vent`, `close` and `open` variants
+alongside `absolute_level`/`delta_level`. But `Vehicle.ChangeSunroofState` only ever sets
+`absolute_level`, so Fleet API's `state: "vent"` has nothing to call. Wiring it up needs new
+methods on `Vehicle` for the three `Void` actions first. Do not map `vent` to a guessed
+percentage.

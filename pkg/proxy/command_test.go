@@ -48,3 +48,55 @@ func TestExtractCommandAction(t *testing.T) {
 		}
 	}
 }
+
+// restOnlyCommands are the Fleet API vehicle commands that have no
+// representation in the vehicle command protocol, and so must be forwarded to
+// the REST API rather than signed and sent to the vehicle.
+var restOnlyCommands = []string{
+	// Server-side processing: the vehicle is not the only participant.
+	"navigation_request",
+	"navigation_gps_request",
+	"navigation_sc_request",
+	"navigation_waypoints_request",
+	"upcoming_calendar_entries",
+	// HvacSteeringWheelHeaterAction carries only a power_on boolean.
+	"remote_steering_wheel_heat_level_request",
+	"remote_auto_steering_wheel_heat_climate_request",
+	// Managed charging is a server-side feature.
+	"set_managed_charge_current_request",
+	"set_managed_charger_location",
+	"set_managed_scheduled_charging_time",
+}
+
+// TestRESTOnlyCommandsAreForwarded checks that each of those commands asks the
+// proxy to forward it. The distinction matters: ErrCommandUseRESTAPI makes
+// Proxy.ServeHTTP call forwardRequest, whereas an unrecognised command is
+// answered with HTTP 400 invalid_command and never reaches Tesla at all.
+func TestRESTOnlyCommandsAreForwarded(t *testing.T) {
+	for _, command := range restOnlyCommands {
+		t.Run(command, func(t *testing.T) {
+			action, err := proxy.ExtractCommandAction(context.Background(), command, proxy.RequestParameters{})
+			if !errors.Is(err, proxy.ErrCommandUseRESTAPI) {
+				t.Errorf("got error %v, want ErrCommandUseRESTAPI", err)
+			}
+			if action != nil {
+				t.Error("got an action to run against the vehicle, want none")
+			}
+		})
+	}
+}
+
+// TestUnknownCommandIsRejected guards the other side of that distinction, so
+// that the fix above cannot be generalised into forwarding anything at all.
+func TestUnknownCommandIsRejected(t *testing.T) {
+	for _, command := range []string{"", "not_a_command", "navigation"} {
+		action, err := proxy.ExtractCommandAction(context.Background(), command, proxy.RequestParameters{})
+		var httpErr *inet.HTTPError
+		if !errors.As(err, &httpErr) || httpErr.Code != http.StatusBadRequest {
+			t.Errorf("command %q: got error %v, want HTTP 400", command, err)
+		}
+		if action != nil {
+			t.Errorf("command %q: got an action to run against the vehicle, want none", command)
+		}
+	}
+}
