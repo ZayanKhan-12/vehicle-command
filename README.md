@@ -210,6 +210,26 @@ domain](https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#r
 The public key referred to in those instructions is the `public_key.pem` file
 in the above example.
 
+You must also **host that same public key** on your domain, at this exact path:
+
+```
+https://<your_domain_name>/.well-known/appspecific/com.tesla.3p.public-key.pem
+```
+
+Tesla fetches it over HTTPS on port 443. Vehicles only accept `prime256v1`
+(also called P-256 or `secp256r1`) keys, which is what `tesla-keygen` produces.
+
+If the file is missing, served on a non-standard port, or holds a key of the
+wrong type, enrollment fails inside the Tesla mobile app, which does not say
+which of those it was. Check the setup before handing the link to customers:
+
+```bash
+tesla-key-check -public-key public_key.pem example.com
+```
+
+It reports each requirement separately and exits non-zero if any fails. It
+cannot check registration with the partner endpoint, which is Tesla-side.
+
 Once your public key is successfully registered, provide vehicle owners with a
 link to `https://tesla.com/_ak/<your_domain_name>`. For example, if you
 registered `example.com`, provide a link to
