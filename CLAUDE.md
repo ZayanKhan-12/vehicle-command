@@ -493,3 +493,38 @@ sometimes decrease while a vehicle is actively charging. The reporter's own capt
 `3.291 → 3.270` with `BMSState: Charge`. This SDK does not compute, smooth or cache that number —
 it is relayed from Tesla's servers — and a maintainer has labelled the issue **Fleetnet**, Tesla's
 own tag for backend problems. The useful contribution there is a better capture, not a patch.
+
+## Public key enrollment, and why those issues are hard to answer
+
+Before a vehicle will accept commands, the application's public key has to be enrolled on it. Three
+things must all be true, and they fail in different places:
+
+1. The key is registered with Tesla through the partner endpoint.
+2. The key is **hosted** at `https://<domain>/.well-known/appspecific/com.tesla.3p.public-key.pem`,
+   over HTTPS on port 443.
+3. The key is `prime256v1`. Vehicles accept no other curve.
+
+Only (3) is visible from inside this repository, and none of the three reports its failure here.
+The user sees a message in the Tesla mobile app, and issues #158 and #159 are what that produces:
+long threads of developers guessing, with answers ranging from certificate authorities to whether
+the domain contains the word "tesla".
+
+`cmd/tesla-key-check` exists so that (2) and (3) can be answered in one command instead of guessed.
+It is deliberately conservative about what it asserts:
+
+- **It checks only what is documented.** Reachability, PEM structure, key type and curve, and
+  optionally that the published key is the one you hold. Nothing else.
+- **It does not check the certificate authority.** A Tesla engineer named a CA allowlist on #159 in
+  2024, and the thread then contradicted itself repeatedly — Amazon certificates working for one
+  developer and not another, Let's Encrypt working for one and not another. Encoding an unverifiable
+  rule would produce confident wrong answers, which is worse than the silence it replaces.
+- **It does not check the domain name.** The "remove tesla from your DNS name" advice on that same
+  thread was contested by maintainers and appears not to be a rule.
+- **It says what it cannot see.** Partner registration is Tesla-side, and the output says so rather
+  than implying a pass means enrollment will work.
+
+The `_ak` link is printed without a trailing slash on purpose: a trailing slash breaks it, which
+took the #159 thread months to establish.
+
+If you extend it, keep that line. A diagnostic that guesses is worse than no diagnostic, because
+people believe it.
