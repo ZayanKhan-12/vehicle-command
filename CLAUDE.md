@@ -361,9 +361,11 @@ guards the other direction so none of this can be generalised into forwarding an
 The proxy currently implements or forwards **every** command in that reference. If the diff below
 comes back non-empty, something has been added upstream.
 
-To re-audit after a Fleet API release, diff the [vehicle commands
-reference](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands) against the
-`case` labels in `ExtractCommandAction`.
+`TestFleetAPICommandCoverage` keeps this honest. It holds the documented command list as data and
+asserts the proxy answers each one with an action or with `ErrCommandUseRESTAPI` — never with the
+400. After a Fleet API release, add any new command to that list; the test then says whether the
+proxy needs a case for it. Issue #188 tracked this gap by hand, in a GitHub comment, for about two
+years, which is the argument for having a test do it.
 
 ### `sun_roof_control`, and why it spans all three outcomes
 
