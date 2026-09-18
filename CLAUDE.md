@@ -251,6 +251,38 @@ the whole status: the work is Tesla's, on both counts. Do not fabricate an imple
 one physically moves a vehicle, and a plausible-looking method that cannot work — or worse, a
 guessed field number aimed at a car — is far worse than an unimplemented feature.
 
+### Settled requests
+
+Running the checks above on the recurring "please add command X" issues. Each line is a grep
+anyone can repeat; re-check before repeating the conclusion, because the protobufs do change.
+
+| Request | Action in either domain? | Fleet API? | Verdict |
+| :--- | :--- | :--- | :--- |
+| Summon (#114) | none — nearest is `VehicleControlTriggerHomelinkAction` | none | Tesla roadmap |
+| Battery preconditioning (#115) | none — `SetPreconditioningMax` is cabin | none | Tesla roadmap |
+| Per-window control (#122) | no selector; not in `ClosureMoveRequest` | n/a | Tesla roadmap |
+| Light show (#145) | none | none | Tesla roadmap |
+| Fan speed (#154) | none — `fan_status` is reported, not settable | none | Tesla roadmap |
+
+Three of those five have the report-but-not-command shape, so check for it every time.
+
+**Light show (#145)** asks for two things and neither exists. Scheduling a show needs the show file
+*on the car*, and light shows are loaded from USB — this protocol has no file transfer at all. The
+other half asks for NTP-style clock sync "within 1ms"; the protocol does carry a vehicle clock
+estimate, but it exists to keep command signatures fresh and its tolerance is `inet.MaxLatency`,
+**10 seconds**. It is the wrong mechanism by four orders of magnitude, so do not offer it as a
+starting point.
+
+**Fan speed (#154)** has no action, but two adjacent capabilities are already exposed and cover much
+of the stated camping use case — say so rather than just declining:
+
+- `set_climate_keeper_mode` with mode `3` is Camp mode (`Vehicle.SetClimateKeeperMode`).
+- `set_cabin_overheat_protection` accepts `fan_only`, which runs the blower without the compressor
+  (`Vehicle.SetCabinOverheatProtection(ctx, on, fanOnly)`).
+
+The same thread also asks for rear climate independent of front. That is a vehicle feature, not an
+API one, and a commenter on the issue has already said so.
+
 ### Worked example: per-window control (issue #122)
 
 The request is a `window` parameter on `window_control`, naming one of the four windows. It cannot
