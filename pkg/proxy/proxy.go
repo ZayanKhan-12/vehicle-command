@@ -459,6 +459,11 @@ func (p *Proxy) loadVehicleAndCommandFromRequest(ctx context.Context, acct *acco
 	}
 
 	commandToExecuteFunc, err := extractCommandAction(ctx, req, command)
+	if errors.Is(err, ErrCommandUseRESTAPI) {
+		// Our caller answers this by forwarding the request unchanged, so
+		// nothing may be written to w here.
+		return nil, nil, err
+	}
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err)
 		return nil, nil, err
@@ -479,6 +484,11 @@ func extractCommandAction(ctx context.Context, req *http.Request, command string
 	if err != nil {
 		return nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "could not read request body"}
 	}
+	// Put the body back. The request may still be forwarded to the REST API --
+	// either because the command has no protocol equivalent, or because the
+	// vehicle turns out not to support the protocol -- and forwardRequest reads
+	// it again to build the outbound request.
+	req.Body = io.NopCloser(bytes.NewReader(body))
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &params); err != nil {
 			return nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "error occurred while parsing request parameters"}
