@@ -170,8 +170,31 @@ type Connection struct {
 	lastPoke time.Time
 }
 
+// A ConnectionOption modifies a Connection returned by [NewConnection].
+type ConnectionOption func(*Connection)
+
+// WithClient makes the Connection send its requests with client instead of with
+// a default [http.Client].
+//
+// This is the hook for behavior that lives in the transport: an
+// [http.RoundTripper] that logs or instruments requests, a proxy, a custom TLS
+// configuration, or a client-wide timeout. Previously the only way to influence
+// any of that was to modify [http.DefaultClient], which is not an option for a
+// program that also makes unrelated HTTP requests.
+//
+// The Connection keeps a reference to client rather than a copy of it, so do
+// not modify client after passing it here. A nil client leaves the default in
+// place.
+func WithClient(client *http.Client) ConnectionOption {
+	return func(c *Connection) {
+		if client != nil {
+			c.client = client
+		}
+	}
+}
+
 // NewConnection creates a Connection.
-func NewConnection(vin string, authHeader, serverURL, userAgent string) *Connection {
+func NewConnection(vin string, authHeader, serverURL, userAgent string, options ...ConnectionOption) *Connection {
 	conn := Connection{
 		UserAgent:  userAgent,
 		vin:        vin,
@@ -179,6 +202,9 @@ func NewConnection(vin string, authHeader, serverURL, userAgent string) *Connect
 		serverURL:  serverURL,
 		authHeader: authHeader,
 		inbox:      make(chan []byte, connector.BufferSize),
+	}
+	for _, option := range options {
+		option(&conn)
 	}
 	return &conn
 }
