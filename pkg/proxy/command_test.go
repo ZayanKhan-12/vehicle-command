@@ -100,3 +100,59 @@ func TestUnknownCommandIsRejected(t *testing.T) {
 		}
 	}
 }
+
+// TestSunRoofControl covers the mapping from the Fleet API's state parameter to
+// the three outcomes ExtractCommandAction can produce. sun_roof_control is
+// unusual in spanning all three: two of its states are signed commands, one has
+// no protobuf equivalent and must be forwarded, and anything else is invalid.
+func TestSunRoofControl(t *testing.T) {
+	ctx := context.Background()
+
+	for _, state := range []string{"vent", "close"} {
+		t.Run(state, func(t *testing.T) {
+			action, err := proxy.ExtractCommandAction(ctx, "sun_roof_control", proxy.RequestParameters{"state": state})
+			if err != nil {
+				t.Fatalf("got error %v, want an action", err)
+			}
+			if action == nil {
+				t.Error("got no action to run against the vehicle")
+			}
+		})
+	}
+
+	// VehicleControlSunroofOpenCloseAction has vent, close and open, but no
+	// stop, so that state cannot be signed and has to be forwarded rather than
+	// rejected.
+	t.Run("stop", func(t *testing.T) {
+		action, err := proxy.ExtractCommandAction(ctx, "sun_roof_control", proxy.RequestParameters{"state": "stop"})
+		if !errors.Is(err, proxy.ErrCommandUseRESTAPI) {
+			t.Errorf("got error %v, want ErrCommandUseRESTAPI", err)
+		}
+		if action != nil {
+			t.Error("got an action to run against the vehicle, want none")
+		}
+	})
+
+	// The protocol does have an open action and the SDK exposes it, but the
+	// Fleet API defines no such state. The proxy emulates the Fleet API, so
+	// accepting it here would let code work against the proxy and then fail
+	// against Tesla.
+	t.Run("open is not a Fleet API state", func(t *testing.T) {
+		action, err := proxy.ExtractCommandAction(ctx, "sun_roof_control", proxy.RequestParameters{"state": "open"})
+		if err == nil {
+			t.Fatal("got no error for a state the Fleet API does not define")
+		}
+		if errors.Is(err, proxy.ErrCommandUseRESTAPI) {
+			t.Error("an unsupported state must not be forwarded to Tesla")
+		}
+		if action != nil {
+			t.Error("got an action to run against the vehicle, want none")
+		}
+	})
+
+	t.Run("missing state", func(t *testing.T) {
+		if _, err := proxy.ExtractCommandAction(ctx, "sun_roof_control", proxy.RequestParameters{}); err == nil {
+			t.Error("got no error for a request with no state parameter")
+		}
+	})
+}

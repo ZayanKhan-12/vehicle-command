@@ -49,6 +49,61 @@ func (v *Vehicle) FlashLights(ctx context.Context) error {
 		})
 }
 
+// VentSunroof partially opens the sunroof, on vehicles that have one.
+func (v *Vehicle) VentSunroof(ctx context.Context) error {
+	return v.executeCarServerAction(ctx,
+		&carserver.Action_VehicleAction{
+			VehicleAction: &carserver.VehicleAction{
+				VehicleActionMsg: &carserver.VehicleAction_VehicleControlSunroofOpenCloseAction{
+					VehicleControlSunroofOpenCloseAction: &carserver.VehicleControlSunroofOpenCloseAction{
+						Action: &carserver.VehicleControlSunroofOpenCloseAction_Vent{
+							Vent: &carserver.Void{},
+						},
+					},
+				},
+			},
+		})
+}
+
+// CloseSunroof closes the sunroof, on vehicles that have one.
+func (v *Vehicle) CloseSunroof(ctx context.Context) error {
+	return v.executeCarServerAction(ctx,
+		&carserver.Action_VehicleAction{
+			VehicleAction: &carserver.VehicleAction{
+				VehicleActionMsg: &carserver.VehicleAction_VehicleControlSunroofOpenCloseAction{
+					VehicleControlSunroofOpenCloseAction: &carserver.VehicleControlSunroofOpenCloseAction{
+						Action: &carserver.VehicleControlSunroofOpenCloseAction_Close{
+							Close: &carserver.Void{},
+						},
+					},
+				},
+			},
+		})
+}
+
+// OpenSunroof fully opens the sunroof, on vehicles that have one.
+//
+// The Fleet API's sun_roof_control endpoint offers no state for this, so it is
+// reachable only through this SDK, including over BLE.
+func (v *Vehicle) OpenSunroof(ctx context.Context) error {
+	return v.executeCarServerAction(ctx,
+		&carserver.Action_VehicleAction{
+			VehicleAction: &carserver.VehicleAction{
+				VehicleActionMsg: &carserver.VehicleAction_VehicleControlSunroofOpenCloseAction{
+					VehicleControlSunroofOpenCloseAction: &carserver.VehicleControlSunroofOpenCloseAction{
+						Action: &carserver.VehicleControlSunroofOpenCloseAction_Open{
+							Open: &carserver.Void{},
+						},
+					},
+				},
+			},
+		})
+}
+
+// ChangeSunroofState moves the sunroof to an absolute level, where 0 is closed
+// and 100 is fully open. The named positions are separate messages rather than
+// particular levels; see [Vehicle.VentSunroof], [Vehicle.CloseSunroof] and
+// [Vehicle.OpenSunroof].
 func (v *Vehicle) ChangeSunroofState(ctx context.Context, sunroofLevel int32) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

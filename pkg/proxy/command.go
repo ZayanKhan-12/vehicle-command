@@ -558,6 +558,23 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return nil, ErrCommandUseRESTAPI
 	case "upcoming_calendar_entries":
 		return nil, ErrCommandUseRESTAPI
+	case "sun_roof_control":
+		state, err := params.getString("state", true)
+		if err != nil {
+			return nil, err
+		}
+		switch state {
+		case "vent":
+			return func(v *vehicle.Vehicle) error { return v.VentSunroof(ctx) }, nil
+		case "close":
+			return func(v *vehicle.Vehicle) error { return v.CloseSunroof(ctx) }, nil
+		case "stop":
+			// VehicleControlSunroofOpenCloseAction has vent, close and open, but
+			// no stop, so this state cannot be signed and is forwarded instead.
+			return nil, ErrCommandUseRESTAPI
+		default:
+			return nil, errors.New("state must be 'vent', 'close' or 'stop'")
+		}
 	case "window_control":
 		// Latitude and longitude are not required for vehicles that support this protocol.
 		cmd, err := params.getString("command", true)
