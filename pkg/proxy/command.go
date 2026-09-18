@@ -117,6 +117,12 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 			return nil, err
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetSteeringWheelHeater(ctx, on) }, nil
+	// HvacSteeringWheelHeaterAction carries only a power_on boolean, so neither the graduated
+	// level nor the automatic mode has a representation in the command protocol.
+	case "remote_steering_wheel_heat_level_request":
+		return nil, ErrCommandUseRESTAPI
+	case "remote_auto_steering_wheel_heat_climate_request":
+		return nil, ErrCommandUseRESTAPI
 	case "set_bioweapon_mode":
 		on, err := params.getBool("on", true)
 		if err != nil {
@@ -543,6 +549,14 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 	// Sharing options. These endpoints often require server-side processing, which prevents strict
 	// end-to-end authentication.
 	case "navigation_request":
+		return nil, ErrCommandUseRESTAPI
+	case "navigation_gps_request":
+		return nil, ErrCommandUseRESTAPI
+	case "navigation_sc_request":
+		return nil, ErrCommandUseRESTAPI
+	case "navigation_waypoints_request":
+		return nil, ErrCommandUseRESTAPI
+	case "upcoming_calendar_entries":
 		return nil, ErrCommandUseRESTAPI
 	case "window_control":
 		// Latitude and longitude are not required for vehicles that support this protocol.
