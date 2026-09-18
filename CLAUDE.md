@@ -210,15 +210,24 @@ alternative route, the Fleet API REST surface, is likewise Tesla's to define; th
 has an `ErrCommandUseRESTAPI` path for the handful of commands that live there instead
 (`navigation_request`, the managed-charging trio).
 
-So for any "please add command X" request, two checks settle it:
+There are **two** command domains, and a check that looks at only one is incomplete. Infotainment
+commands are `VehicleAction`s in `car_server.proto`; body-control commands — doors, trunks, charge
+port, tonneau — are `ClosureMoveRequest` and friends in `vcsec.proto`, which `tesla-control`
+reaches over BLE even when infotainment is asleep. So for any "please add command X" request,
+three checks settle it:
 
 ```sh
-grep -n "X" pkg/protocol/protobuf/car_server.proto   # is there an action for it?
+grep -rin "X" pkg/protocol/protobuf/*.proto        # any action, in either domain?
 # and: is there a Fleet API endpoint for it?
 ```
 
-If neither exists, the request is a Tesla roadmap item and the issue cannot be closed by code
-here. Say so, with the evidence, rather than building something that cannot work.
+If none exists, the request is a Tesla roadmap item and the issue cannot be closed by code here.
+Say so, with the evidence, rather than building something that cannot work.
+
+A refinement that is worth checking before concluding: **the protocol often reports more than it
+can command.** A request to control some part of the car individually may be impossible while the
+corresponding *state* is already available per-part, and saying so is much more useful than a flat
+no. Issue #122 below is exactly that case.
 
 ### Worked example: Summon (issue #114)
 
@@ -241,6 +250,36 @@ A collaborator's answer on the issue ("We currently do not have a roadmap for th
 the whole status: the work is Tesla's, on both counts. Do not fabricate an implementation. This
 one physically moves a vehicle, and a plausible-looking method that cannot work — or worse, a
 guessed field number aimed at a car — is far worse than an unimplemented feature.
+
+### Worked example: per-window control (issue #122)
+
+The request is a `window` parameter on `window_control`, naming one of the four windows. It cannot
+be built, and both domains have to be checked to say so:
+
+- **Infotainment.** `VehicleControlWindowAction` carries `unknown`, `vent` and `close` and nothing
+  else. There is no selector, so the action is inherently all-windows. (Field 1 is `reserved` — it
+  was the location, no longer required for vehicles on this protocol.)
+- **Body control.** `ClosureMoveRequest` in `vcsec.proto` *does* address parts individually —
+  `frontDriverDoor`, `frontPassengerDoor`, `rearDriverDoor`, `rearPassengerDoor`, `rearTrunk`,
+  `frontTrunk`, `chargePort`, `tonneau` — which makes it the plausible place for this to live. It
+  is not there. Windows are not closures in this protocol.
+
+But the asymmetry is the useful part of the answer. `ClosuresState` in `vehicle.proto` reports each
+window separately:
+
+```
+window_open_driver_front = 107     window_open_passenger_front = 108
+window_open_driver_rear  = 109     window_open_passenger_rear  = 110
+```
+
+That is already exposed, through `StateCategoryClosures` and `tesla-control state closures`. So the
+honest answer to #122 is that the car will *tell* you which window is open but will only *act* on
+all four together — not simply "unsupported".
+
+One separate thing that recurs on this issue: `window_control` failing for callers who use the
+Fleet API directly is usually the `lat`/`lon` requirement, which Tesla enforces on `close` as an
+anti-theft measure. Vehicles on the command protocol do not need it, which is why the proxy ignores
+those parameters and why the protobuf field is `reserved`.
 
 ## Preconditioning, and the three things that word means here
 
