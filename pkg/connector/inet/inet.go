@@ -155,6 +155,9 @@ func (c *Connection) SendFleetAPICommand(ctx context.Context, endpoint string, c
 			if len(matches) == 2 && ValidTeslaDomainSuffix(matches[1]) {
 				log.Debug("Received HTTP Status 421. Updating server URL.")
 				c.serverURL = matches[1]
+				if c.onRegionChange != nil {
+					c.onRegionChange(matches[1])
+				}
 			}
 		}
 	}
@@ -169,6 +172,8 @@ type Connection struct {
 	serverURL  string
 	inbox      chan []byte
 	authHeader string
+
+	onRegionChange func(host string)
 
 	lock     sync.Mutex
 	lastPoke time.Time
@@ -194,6 +199,22 @@ func WithClient(client *http.Client) ConnectionOption {
 		if client != nil {
 			c.client = client
 		}
+	}
+}
+
+// WithRegionHandler registers f to be called when the Fleet API answers a request
+// with HTTP 421 and names the regional server that should have been used.
+//
+// The Connection redirects itself either way; the handler exists so that
+// whoever created it can record the correction too. Without it the knowledge
+// dies with the Connection, and the next request starts by being misrouted
+// again. See [github.com/teslamotors/vehicle-command/pkg/account.Account.GetVehicle].
+//
+// f is called from the goroutine that made the request, before that request
+// returns.
+func WithRegionHandler(f func(host string)) ConnectionOption {
+	return func(c *Connection) {
+		c.onRegionChange = f
 	}
 }
 

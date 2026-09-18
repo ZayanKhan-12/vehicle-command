@@ -491,3 +491,78 @@ func TestStaticTokenUnchanged(t *testing.T) {
 		t.Errorf("subject = %s, want STATIC", got)
 	}
 }
+
+// TestGetVehicleAdoptsRegionRedirect checks that when a vehicle connection is
+// told it is talking to the wrong regional server, the Account records the
+// correction.
+//
+// Without this the knowledge dies with the connection: the Account keeps
+// handing out vehicles pointed at the wrong region, and anything that reads
+// acct.Host afterwards -- notably the HTTP proxy, when it falls back to
+// forwarding a request for a vehicle that turns out not to support the command
+// protocol -- sends it to the region Tesla has already rejected. That is the
+// failure in issue #131.
+func TestGetVehicleAdoptsRegionRedirect(t *testing.T) {
+	const correctHost = "fleet-api.prd.na.vn.cloud.tesla.com"
+	body := `{"response":null,"error":"user out of region, use base URL: https://` + correctHost +
+		`, see https://developer.tesla.com/docs/fleet-api#regional-requirements","error_description":""}`
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusMisdirectedRequest)
+		w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	acct := testAccount(t, server, WithClient(server.Client()))
+	misroutedHost := acct.Host
+
+	car, err := acct.GetVehicle(context.Background(), "VIN123", nil, nil)
+	if err != nil {
+		t.Fatalf("GetVehicle failed: %s", err)
+	}
+	defer car.Disconnect()
+
+	// Wakeup treats HTTP 421 as retryable and would otherwise wait before
+	// trying again; one attempt is all this needs, so bound it with a context.
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_ = car.Wakeup(ctx)
+
+	if acct.Host == misroutedHost {
+		t.Errorf("Host is still %s; the redirect was not recorded", acct.Host)
+	}
+	if acct.Host != correctHost {
+		t.Errorf("Host = %s, want %s", acct.Host, correctHost)
+	}
+}
+
+// TestGetVehicleIgnoresUntrustedRedirect checks that the Account does not adopt
+// a host outside Tesla's domains. acct.Host decides where the OAuth token is
+// sent, so a redirect named by a response body must be checked before it is
+// believed.
+func TestGetVehicleIgnoresUntrustedRedirect(t *testing.T) {
+	body := `{"response":null,"error":"user out of region, use base URL: https://fleet-api.attacker.example.com, see https://developer.tesla.com/docs/fleet-api#regional-requirements","error_description":""}`
+
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusMisdirectedRequest)
+		w.Write([]byte(body))
+	}))
+	defer server.Close()
+
+	acct := testAccount(t, server, WithClient(server.Client()))
+	misroutedHost := acct.Host
+
+	car, err := acct.GetVehicle(context.Background(), "VIN123", nil, nil)
+	if err != nil {
+		t.Fatalf("GetVehicle failed: %s", err)
+	}
+	defer car.Disconnect()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	_ = car.Wakeup(ctx)
+
+	if acct.Host != misroutedHost {
+		t.Errorf("Host = %s, want it unchanged at %s", acct.Host, misroutedHost)
+	}
+}

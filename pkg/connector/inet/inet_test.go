@@ -54,3 +54,54 @@ func TestWithClient(t *testing.T) {
 		t.Error("WithClient(nil) left the Connection without a client")
 	}
 }
+
+// outOfRegionBody is the JSON error the Fleet API returns with HTTP 421. The
+// region that should have been used is named in the body, not in a header.
+func outOfRegionBody(host string) string {
+	return `{"response":null,"error":"user out of region, use base URL: https://` + host +
+		`, see https://developer.tesla.com/docs/fleet-api#regional-requirements","error_description":""}`
+}
+
+// TestRegionHandler checks that a Connection reports an out-of-region redirect
+// to whoever created it, as well as following it itself.
+func TestRegionHandler(t *testing.T) {
+	const correctHost = "fleet-api.prd.na.vn.cloud.tesla.com"
+
+	for _, test := range []struct {
+		name     string
+		named    string
+		wantHost string
+	}{
+		{"valid tesla domain", correctHost, correctHost},
+		{"domain outside tesla", "fleet-api.attacker.example.com", ""},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(http.StatusMisdirectedRequest)
+				w.Write([]byte(outOfRegionBody(test.named)))
+			}))
+			defer server.Close()
+			domain, _ := strings.CutPrefix(server.URL, "https://")
+
+			var reported string
+			conn := NewConnection("VIN123", "", domain, "",
+				WithClient(server.Client()),
+				WithRegionHandler(func(host string) { reported = host }))
+			defer conn.Close()
+
+			// The error is expected; the redirect is the point.
+			_, _ = conn.SendFleetAPICommand(context.Background(), "api/1/test", nil)
+
+			if reported != test.wantHost {
+				t.Errorf("handler was told %q, want %q", reported, test.wantHost)
+			}
+			// The Connection's own redirect and the report must agree.
+			if test.wantHost != "" && conn.serverURL != test.wantHost {
+				t.Errorf("connection redirected to %q, want %q", conn.serverURL, test.wantHost)
+			}
+			if test.wantHost == "" && conn.serverURL != domain {
+				t.Errorf("connection redirected to %q on an untrusted domain, want it unchanged", conn.serverURL)
+			}
+		})
+	}
+}

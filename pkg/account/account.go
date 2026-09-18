@@ -271,7 +271,13 @@ func NewFromTokenSource(source oauth2.TokenSource, userAgent string, options ...
 // sessions parameter may also be nil, but providing a cache.SessionCache avoids a round-trip
 // handshake with the Vehicle in subsequent connections.
 func (a *Account) GetVehicle(_ context.Context, vin string, privateKey authentication.ECDHPrivateKey, sessions *cache.SessionCache) (*vehicle.Vehicle, error) {
-	conn := inet.NewConnection(vin, a.authHeader, a.Host, a.UserAgent, inet.WithClient(a.client))
+	conn := inet.NewConnection(vin, a.authHeader, a.Host, a.UserAgent,
+		inet.WithClient(a.client),
+		// Tesla answers a request sent to the wrong regional server with HTTP
+		// 421 and names the right one. The connection redirects itself, but
+		// without this the Account would keep handing out vehicles pointed at
+		// the wrong region, and its own Get and Post would stay misrouted too.
+		inet.WithRegionHandler(func(host string) { a.Host = host }))
 	car, err := vehicle.NewVehicle(conn, privateKey, sessions)
 	if err != nil {
 		conn.Close()
