@@ -11,6 +11,9 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"golang.org/x/oauth2"
 )
 
 // b64Encode encodes a string to base64 without padding.
@@ -221,5 +224,270 @@ func TestWithNilClient(t *testing.T) {
 	}
 	if acct.client == nil {
 		t.Error("WithClient(nil) left the Account without a client")
+	}
+}
+
+// fakeTokenSource hands out a fresh, numbered token each time it is consulted,
+// so that a test can tell one token apart from the next.
+type fakeTokenSource struct {
+	mu       sync.Mutex
+	calls    int
+	lifetime time.Duration // zero means the token is already expired
+	err      error
+}
+
+func (s *fakeTokenSource) Token() (*oauth2.Token, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.err != nil {
+		return nil, s.err
+	}
+	s.calls++
+	expiry := time.Now().Add(-time.Second)
+	if s.lifetime > 0 {
+		expiry = time.Now().Add(s.lifetime)
+	}
+	return &oauth2.Token{
+		AccessToken: makeTestJWT(&oauthPayload{
+			Audiences: []string{"https://fleet-api.prd.eu.vn.cloud.tesla.com"},
+			OUCode:    "EU",
+			Subject:   fmt.Sprintf("SUBJECT-%d", s.calls),
+		}),
+		TokenType: "Bearer",
+		Expiry:    expiry,
+	}, nil
+}
+
+func (s *fakeTokenSource) callCount() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.calls
+}
+
+// authRecorder is an httptest handler that records the Authorization header of
+// every request it serves.
+type authRecorder struct {
+	mu      sync.Mutex
+	headers []string
+}
+
+func (r *authRecorder) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	r.mu.Lock()
+	r.headers = append(r.headers, req.Header.Get("Authorization"))
+	r.mu.Unlock()
+	w.Write([]byte(`{"response": {"state": "online"}}`))
+}
+
+func (r *authRecorder) seen() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return append([]string(nil), r.headers...)
+}
+
+// subjectOf extracts the Subject claim from a "Bearer <jwt>" header, which is
+// how these tests identify which token was used.
+func subjectOf(t *testing.T, header string) string {
+	t.Helper()
+	jwt, ok := strings.CutPrefix(header, "Bearer ")
+	if !ok {
+		t.Fatalf("header %q is not a bearer token", header)
+	}
+	parts := strings.Split(jwt, ".")
+	if len(parts) != 3 {
+		t.Fatalf("header %q does not carry a JWT", header)
+	}
+	body, err := base64.RawStdEncoding.DecodeString(parts[1])
+	if err != nil {
+		t.Fatalf("token payload is not base64: %s", err)
+	}
+	var payload oauthPayload
+	if err := json.Unmarshal(body, &payload); err != nil {
+		t.Fatalf("token payload is not JSON: %s", err)
+	}
+	return payload.Subject
+}
+
+// TestNewFromTokenSource checks that the region is derived from the first token
+// the source produces, the same way New derives it from a token string.
+func TestNewFromTokenSource(t *testing.T) {
+	source := &fakeTokenSource{lifetime: time.Hour}
+	acct, err := NewFromTokenSource(source, "")
+	if err != nil {
+		t.Fatalf("NewFromTokenSource failed: %s", err)
+	}
+	if want := "fleet-api.prd.eu.vn.cloud.tesla.com"; acct.Host != want {
+		t.Errorf("Host = %s, want %s", acct.Host, want)
+	}
+	if acct.Subject != "SUBJECT-1" {
+		t.Errorf("Subject = %s, want SUBJECT-1", acct.Subject)
+	}
+	if source.callCount() != 1 {
+		t.Errorf("source consulted %d times during construction, want 1", source.callCount())
+	}
+	// The Account must not be holding a copy of that first token: that is the
+	// bug this feature exists to remove.
+	if acct.authHeader != "" {
+		t.Errorf("authHeader = %q, want empty so the token source is the only source of truth", acct.authHeader)
+	}
+}
+
+// TestNewFromTokenSourceErrors checks the two ways construction can fail.
+func TestNewFromTokenSourceErrors(t *testing.T) {
+	if _, err := NewFromTokenSource(nil, ""); err == nil {
+		t.Error("expected an error from a nil TokenSource")
+	}
+	failing := &fakeTokenSource{err: fmt.Errorf("no network")}
+	if _, err := NewFromTokenSource(failing, ""); err == nil {
+		t.Error("expected an error when the source cannot produce a token")
+	}
+}
+
+// TestTokenSourceRefreshes is the point of the feature: an expired token is
+// replaced without the caller rebuilding the Account.
+func TestTokenSourceRefreshes(t *testing.T) {
+	recorder := &authRecorder{}
+	server := httptest.NewTLSServer(recorder)
+	defer server.Close()
+
+	source := &fakeTokenSource{} // every token is already expired
+	acct, err := NewFromTokenSource(source, "", WithClient(server.Client()))
+	if err != nil {
+		t.Fatalf("NewFromTokenSource failed: %s", err)
+	}
+	acct.Host, _ = strings.CutPrefix(server.URL, "https://")
+
+	for i := 0; i < 3; i++ {
+		if _, err := acct.Get(context.Background(), "api/1/users/me"); err != nil {
+			t.Fatalf("request %d failed: %s", i, err)
+		}
+	}
+
+	headers := recorder.seen()
+	if len(headers) != 3 {
+		t.Fatalf("server saw %d requests, want 3", len(headers))
+	}
+	want := []string{"SUBJECT-2", "SUBJECT-3", "SUBJECT-4"} // SUBJECT-1 was spent deriving the region
+	got := []string{subjectOf(t, headers[0]), subjectOf(t, headers[1]), subjectOf(t, headers[2])}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("tokens used = %v, want %v", got, want)
+	}
+}
+
+// TestTokenSourceReusesValidToken checks the other half of the contract: a
+// token that is still good is not thrown away, so enabling refresh does not
+// turn one API call into two.
+func TestTokenSourceReusesValidToken(t *testing.T) {
+	recorder := &authRecorder{}
+	server := httptest.NewTLSServer(recorder)
+	defer server.Close()
+
+	source := &fakeTokenSource{lifetime: time.Hour}
+	acct, err := NewFromTokenSource(source, "", WithClient(server.Client()))
+	if err != nil {
+		t.Fatalf("NewFromTokenSource failed: %s", err)
+	}
+	acct.Host, _ = strings.CutPrefix(server.URL, "https://")
+
+	for i := 0; i < 3; i++ {
+		if _, err := acct.Get(context.Background(), "api/1/users/me"); err != nil {
+			t.Fatalf("request %d failed: %s", i, err)
+		}
+	}
+
+	headers := recorder.seen()
+	if a, b, c := subjectOf(t, headers[0]), subjectOf(t, headers[1]), subjectOf(t, headers[2]); a != b || b != c {
+		t.Errorf("a valid token was not reused: %s, %s, %s", a, b, c)
+	}
+	// Once to learn the region, once for the first request; then cached.
+	if source.callCount() != 2 {
+		t.Errorf("source consulted %d times, want 2", source.callCount())
+	}
+}
+
+// TestTokenSourceReachesVehicles checks that a Vehicle obtained from the
+// Account refreshes too. Without this, long-running programs would keep working
+// at the account level and start failing at the command level.
+func TestTokenSourceReachesVehicles(t *testing.T) {
+	recorder := &authRecorder{}
+	server := httptest.NewTLSServer(recorder)
+	defer server.Close()
+
+	source := &fakeTokenSource{}
+	acct, err := NewFromTokenSource(source, "", WithClient(server.Client()))
+	if err != nil {
+		t.Fatalf("NewFromTokenSource failed: %s", err)
+	}
+	acct.Host, _ = strings.CutPrefix(server.URL, "https://")
+
+	car, err := acct.GetVehicle(context.Background(), "VIN123", nil, nil)
+	if err != nil {
+		t.Fatalf("GetVehicle failed: %s", err)
+	}
+	defer car.Disconnect()
+
+	if err := car.Wakeup(context.Background()); err != nil {
+		t.Fatalf("Wakeup failed: %s", err)
+	}
+	headers := recorder.seen()
+	if len(headers) != 1 {
+		t.Fatalf("server saw %d requests, want 1", len(headers))
+	}
+	if got := subjectOf(t, headers[0]); got != "SUBJECT-2" {
+		t.Errorf("vehicle used token %s, want the refreshed SUBJECT-2", got)
+	}
+}
+
+// TestTokenSourceComposesWithClient checks that the two options do not fight,
+// in either order: the caller's Transport still carries the request, and the
+// token source still supplies the credentials.
+func TestTokenSourceComposesWithClient(t *testing.T) {
+	for _, order := range []string{"client first", "token source first"} {
+		t.Run(order, func(t *testing.T) {
+			recorder := &authRecorder{}
+			server := httptest.NewTLSServer(recorder)
+			defer server.Close()
+
+			transport := &countingTransport{base: server.Client().Transport}
+			source := &fakeTokenSource{lifetime: time.Hour}
+			options := []Option{WithClient(&http.Client{Transport: transport}), WithTokenSource(source)}
+			if order == "token source first" {
+				options[0], options[1] = options[1], options[0]
+			}
+
+			acct, err := New(makeTestJWT(&oauthPayload{Audiences: []string{"https://auth.tesla.com/nts"}}), "", options...)
+			if err != nil {
+				t.Fatalf("New failed: %s", err)
+			}
+			acct.Host, _ = strings.CutPrefix(server.URL, "https://")
+
+			if _, err := acct.Get(context.Background(), "api/1/users/me"); err != nil {
+				t.Fatalf("Get failed: %s", err)
+			}
+			if got := transport.seen(); !reflect.DeepEqual(got, []string{"/api/1/users/me"}) {
+				t.Errorf("custom transport saw %v, want the request to pass through it", got)
+			}
+			if got := subjectOf(t, recorder.seen()[0]); got != "SUBJECT-1" {
+				t.Errorf("token source did not supply credentials: subject %s", got)
+			}
+		})
+	}
+}
+
+// TestStaticTokenUnchanged guards the existing path: an Account built from a
+// token string still sends that token, and still sends it on vehicle requests.
+func TestStaticTokenUnchanged(t *testing.T) {
+	recorder := &authRecorder{}
+	server := httptest.NewTLSServer(recorder)
+	defer server.Close()
+
+	token := makeTestJWT(&oauthPayload{Audiences: []string{"https://auth.tesla.com/nts"}, Subject: "STATIC"})
+	acct := testAccount(t, server, WithClient(server.Client()))
+	acct.authHeader = "Bearer " + token
+
+	if _, err := acct.Get(context.Background(), "api/1/users/me"); err != nil {
+		t.Fatalf("Get failed: %s", err)
+	}
+	if got := subjectOf(t, recorder.seen()[0]); got != "STATIC" {
+		t.Errorf("subject = %s, want STATIC", got)
 	}
 }
