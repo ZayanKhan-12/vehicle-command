@@ -117,3 +117,44 @@ Note that `New` takes options variadically. Adding a variadic parameter keeps ev
 site compiling; it does change the function's type, which would affect code that assigns
 `account.New` to a `func(string, string) (*Account, error)` variable. That form does not appear in
 this repository or in its examples.
+
+## Refreshing credentials
+
+An `Account` built by `New` holds one bearer string for its whole lifetime, so it stops working
+when that token expires — a few hours. The fix is not to re-create the `Account` on a timer but
+to give it an `oauth2.TokenSource`, which is Go's standard shape for "hand me a valid token"
+(issue #29):
+
+```go
+acct, err := account.NewFromTokenSource(config.TokenSource(ctx, token), userAgent)
+```
+
+The implementation is deliberately thin, and that is the thing to preserve. Rather than adding a
+credential-refresh path of its own, `applyTokenSource` layers an `oauth2.Transport` over whatever
+`http.Client` the options left in place, and clears `authHeader`:
+
+- **Refresh lives in the transport**, so it applies to every request the SDK makes without each
+  call site having to remember it. In particular, vehicles inherit it for free, because
+  `GetVehicle` already forwards the client (see above). That inheritance is the part most likely
+  to regress: an account-level refresh that vehicles do not share fails *later*, under load, in
+  production, which is the worst place to find it. `TestTokenSourceReachesVehicles` covers it.
+- **`authHeader` is emptied, not left stale.** A stored copy of the first token would be the value
+  vehicle connections inherit, and would silently win over the fresh one if the ordering ever
+  changed. Both `Account.Get` and `inet.SendFleetAPICommand` now skip an empty `Authorization`
+  header, treating "empty" as "the Transport supplies it".
+- **The client is copied, not mutated**, because it may be the caller's, shared with the rest of
+  their program.
+- **The wrapping happens after all options are applied**, so `WithClient` and `WithTokenSource`
+  compose in either order. A test runs both orders.
+- **`oauth2.ReuseTokenSource` caches** the token until it nears expiry, so enabling refresh does
+  not turn one API call into two. `TestTokenSourceReusesValidToken` asserts the source is
+  consulted twice for three requests — once to learn the region, once for the first request.
+
+`NewFromTokenSource` spends one token during construction, because the Fleet API region is
+encoded in the token's audience claim and has to be known before any request can be addressed.
+The tests count tokens from there, which is why they expect `SUBJECT-2` on the first request.
+
+`golang.org/x/oauth2` is pinned to **v0.24.0**: it is the newest release that still declares
+`go 1.18`. From v0.27.0 onwards the module requires `go 1.23.0`, which would force this module's
+`go` directive up and raise the floor for everyone who depends on it. Check that constraint before
+bumping.

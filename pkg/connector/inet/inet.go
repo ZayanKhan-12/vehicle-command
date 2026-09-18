@@ -98,7 +98,11 @@ func SendFleetAPICommand(ctx context.Context, client *http.Client, userAgent, au
 
 	request.Header.Set("User-Agent", userAgent)
 	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("Authorization", authHeader)
+	// An empty header means the caller arranged for the client's Transport to
+	// supply the Authorization header, as an oauth2.Transport does.
+	if authHeader != "" {
+		request.Header.Set("Authorization", authHeader)
+	}
 	request.Header.Set("Accept", "*/*")
 
 	result, err := client.Do(request)

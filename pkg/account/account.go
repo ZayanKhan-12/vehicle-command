@@ -13,6 +13,8 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"golang.org/x/oauth2"
+
 	"github.com/teslamotors/vehicle-command/internal/authentication"
 	"github.com/teslamotors/vehicle-command/internal/log"
 	"github.com/teslamotors/vehicle-command/pkg/cache"
@@ -69,6 +71,8 @@ type Account struct {
 	Host       string
 	Subject    string
 	client     *http.Client
+
+	tokenSource oauth2.TokenSource
 }
 
 // An Option modifies an Account returned by [New].
@@ -94,6 +98,53 @@ func WithClient(client *http.Client) Option {
 			a.client = client
 		}
 	}
+}
+
+// WithTokenSource makes the Account obtain an OAuth token from source for each
+// request, rather than reusing the single token it was constructed with.
+//
+// An [Account] built from a token string holds that token for its whole
+// lifetime, so a long-running program has to discard the Account and build a
+// new one every time the token expires -- and must notice the expiry itself.
+// An [oauth2.TokenSource] is the idiomatic Go answer: it hands out a valid
+// token on demand and refreshes in the background. Vehicles returned by
+// [Account.GetVehicle] share the refreshed credentials, so commands sent hours
+// later keep working.
+//
+// The token source is consulted through [oauth2.ReuseTokenSource], so a token
+// is fetched again only once the previous one is close to expiring, not on
+// every request.
+//
+// WithTokenSource composes with [WithClient] in either order: the token source
+// is layered over whichever client is in place once all options have been
+// applied, leaving that client's Transport to carry the request.
+//
+// See [NewFromTokenSource] for the usual way to build such an Account.
+func WithTokenSource(source oauth2.TokenSource) Option {
+	return func(a *Account) {
+		a.tokenSource = source
+	}
+}
+
+// applyTokenSource layers a token source, if one was configured, over the
+// client the options left in place. It runs after all options so that the
+// result does not depend on the order they were given in.
+func (a *Account) applyTokenSource() {
+	if a.tokenSource == nil {
+		return
+	}
+	// Copy the client rather than modify it. It may have come from the caller
+	// through WithClient, and may be shared with the rest of their program.
+	client := *a.client
+	client.Transport = &oauth2.Transport{
+		Source: oauth2.ReuseTokenSource(nil, a.tokenSource),
+		Base:   a.client.Transport,
+	}
+	a.client = &client
+	// The Authorization header is now set per request from the token source.
+	// A copy stored here could only ever go stale, and would be the value the
+	// vehicle connections inherited.
+	a.authHeader = ""
 }
 
 // We don't parse JWTs beyond what's required to extract the API server domain name
@@ -171,7 +222,42 @@ func New(oauthToken, userAgent string, options ...Option) (*Account, error) {
 	for _, option := range options {
 		option(account)
 	}
+	account.applyTokenSource()
 	return account, nil
+}
+
+// NewFromTokenSource returns an [Account] that takes its OAuth token from
+// source, refreshing it as needed, and that can be used to fetch a
+// [vehicle.Vehicle].
+//
+// This is the constructor to use in a long-running program. Unlike [New], the
+// returned Account does not stop working when the token it started with
+// expires; see [WithTokenSource].
+//
+// One token is fetched immediately, because the Fleet API region this account
+// belongs to is encoded in the token's audience claim and must be known before
+// any request can be addressed. A source that cannot produce a token yet
+// therefore fails here rather than at first use.
+//
+// Building a source is the caller's job, and is usually a matter of
+//
+//	config.TokenSource(ctx, token)
+//
+// on an [oauth2.Config]. Note that the context given there governs the refresh
+// requests for the lifetime of the Account, so it should not be a short-lived
+// per-request context.
+func NewFromTokenSource(source oauth2.TokenSource, userAgent string, options ...Option) (*Account, error) {
+	if source == nil {
+		return nil, fmt.Errorf("client provided a nil TokenSource")
+	}
+	token, err := source.Token()
+	if err != nil {
+		return nil, fmt.Errorf("could not obtain an initial OAuth token: %w", err)
+	}
+	// WithTokenSource goes first so that it can still be overridden by an
+	// explicit option from the caller.
+	options = append([]Option{WithTokenSource(source)}, options...)
+	return New(token.AccessToken, userAgent, options...)
 }
 
 // GetVehicle returns the Vehicle belonging to the account with the provided vin.
@@ -203,7 +289,11 @@ func (a *Account) Get(ctx context.Context, endpoint string) ([]byte, error) {
 	log.Debug("Requesting %s...", url)
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("User-Agent", a.UserAgent)
-	request.Header.Set("Authorization", a.authHeader)
+	// An empty header means the Authorization header is supplied by the
+	// client's Transport; see Account.applyTokenSource.
+	if a.authHeader != "" {
+		request.Header.Set("Authorization", a.authHeader)
+	}
 	response, err := a.client.Do(request)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching %s: %w", endpoint, err)
