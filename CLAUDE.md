@@ -196,3 +196,48 @@ https://developer.tesla.com/docs/fleet-api/authentication/overview. Note that th
 ship a mapping from commands to required scopes: which scopes a given command needs is Tesla's to
 define and change, and a guess baked in here would be wrong quietly. Callers compose the set they
 need from the constants.
+
+## What cannot be added from this repository
+
+Some feature requests here cannot be satisfied by any change to this code, and it saves a lot of
+effort to recognise that shape early. The boundary is the **protocol**, not the SDK.
+
+`pkg/vehicle` can only expose a command whose message the vehicle already understands. Commands
+travel as a `VehicleAction` — a protobuf `oneof` in `pkg/protocol/protobuf/car_server.proto`,
+currently 60 entries — signed with the application's private key and relayed by Tesla's servers,
+which do not translate. A third party cannot invent a field number and have a car act on it. The
+alternative route, the Fleet API REST surface, is likewise Tesla's to define; the proxy already
+has an `ErrCommandUseRESTAPI` path for the handful of commands that live there instead
+(`navigation_request`, the managed-charging trio).
+
+So for any "please add command X" request, two checks settle it:
+
+```sh
+grep -n "X" pkg/protocol/protobuf/car_server.proto   # is there an action for it?
+# and: is there a Fleet API endpoint for it?
+```
+
+If neither exists, the request is a Tesla roadmap item and the issue cannot be closed by code
+here. Say so, with the evidence, rather than building something that cannot work.
+
+### Worked example: Summon (issue #114)
+
+Both checks come back empty:
+
+- **No action in the command protocol.** Nothing matching `summon`, `autopark` or `auto_park`
+  appears in any `.proto` file in `pkg/protocol/protobuf/`. The nearest neighbour,
+  `VehicleControlTriggerHomelinkAction`, is Homelink.
+- **No endpoint in the Fleet API.** The vehicle endpoints reference lists no summon or autopark
+  endpoint. The legacy owner-API endpoints that third parties once used for this were shut down
+  on 2024-03-26.
+
+There is also a second, independent blocker that a new protobuf message alone would not remove:
+Summon is a *continuously supervised* manoeuvre. It needs a live channel with a dead-man's switch
+— the operator holds a control and the car stops when they let go — which is why the old
+implementations used the streaming API. The command protocol here is request/response and
+carries no such channel, so supporting Summon means designing one, not adding a method.
+
+A collaborator's answer on the issue ("We currently do not have a roadmap for this") is therefore
+the whole status: the work is Tesla's, on both counts. Do not fabricate an implementation. This
+one physically moves a vehicle, and a plausible-looking method that cannot work — or worse, a
+guessed field number aimed at a car — is far worse than an unimplemented feature.
