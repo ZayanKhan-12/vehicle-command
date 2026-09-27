@@ -527,6 +527,26 @@ sometimes decrease while a vehicle is actively charging. The reporter's own capt
 it is relayed from Tesla's servers — and a maintainer has labelled the issue **Fleetnet**, Tesla's
 own tag for backend problems. The useful contribution there is a better capture, not a patch.
 
+### Worked example: `est_battery_range` is always 0 (issue #448)
+
+Issue #448 reports `charge_state.est_battery_range` stuck at 0 after having worked before. The
+field exists in `vehicle.proto` (`ChargeState.est_battery_range = 112`) next to `battery_range`
+and `ideal_battery_range`. `Vehicle.GetState(StateCategoryCharge)` asks for `GetChargeState` and
+returns the protobuf as the vehicle sent it — there is no computation, cache, or zeroing of that
+float in this repository. Inventing a substitute range here would be harmful.
+
+Independent reports line up with a **vehicle firmware / Fleet API** change, not an SDK regression:
+fleet-telemetry #459 (`EstBatteryRange` missing from telemetry and from `vehicle_data`) and
+TeslaMate #5298 (field arrives as `nil` while rated/ideal stay populated), both pointing at the
+`2026.14.x` software line as the cutoff. Go's `GetEstBatteryRange()` returns `0` when the oneof is
+*unset*, so a reported "always 0" is often "field absent" rather than a literal zero from the car.
+Check `GetOptionalEstBatteryRange() != nil` (or the JSON key's presence) before treating the value
+as real; prefer `battery_range` / `ideal_battery_range` while Tesla restores or documents the
+estimated-range signal.
+
+Do not patch this repository to synthesise `est_battery_range` from the other two. Point the
+reporter at firmware version and at the sibling fields that still work.
+
 ### Worked example: dashboard "Domain is invalid" (issue #477)
 
 The Client Details step of `developer.tesla.com` rejects Allowed Origins with one generic message
