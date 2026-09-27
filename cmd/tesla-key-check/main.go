@@ -29,6 +29,15 @@ import (
 	"time"
 )
 
+// fetchResult is what came back from the well-known URL, including the leaf
+// certificate when the transport exposed one. The leaf is optional because
+// some test transports never populate rsp.TLS.
+type fetchResult struct {
+	body []byte
+	host string
+	leaf *x509.Certificate
+}
+
 // KeyPath is where Tesla fetches a third-party application's public key.
 const KeyPath = "/.well-known/appspecific/com.tesla.3p.public-key.pem"
 
@@ -81,21 +90,29 @@ func checkDomain(ctx context.Context, client *http.Client, domain string, want *
 	add("domain", statusOK, "%s", domain)
 
 	target := "https://" + domain + KeyPath
-	body, final, err := fetch(ctx, client, target)
+	got, err := fetch(ctx, client, target)
 	if err != nil {
 		add("fetch", statusFail, "%s: %s", target, err)
 		return checks
 	}
 	add("fetch", statusOK, "%s", target)
 
-	if final != domain {
-		add("redirect", statusWarn,
-			"redirected to %s; Tesla follows the original URL, so serve the key on %s itself", final, domain)
+	if got.leaf != nil {
+		// Informational only. The developer dashboard's "Domain is invalid"
+		// check (#477, #159) uses a private CA allowlist this tool cannot
+		// verify; printing the leaf issuer turns that into a fact the
+		// operator can take to support instead of a guess.
+		add("tls", statusOK, "leaf CN=%q issuer=%q", got.leaf.Subject.CommonName, got.leaf.Issuer.CommonName)
 	}
 
-	block, _ := pem.Decode(body)
+	if got.host != domain {
+		add("redirect", statusWarn,
+			"redirected to %s; Tesla follows the original URL, so serve the key on %s itself", got.host, domain)
+	}
+
+	block, _ := pem.Decode(got.body)
 	if block == nil {
-		add("pem", statusFail, "not a PEM block (%s)", describe(body))
+		add("pem", statusFail, "not a PEM block (%s)", describe(got.body))
 		return checks
 	}
 	if block.Type != "PUBLIC KEY" {
@@ -155,26 +172,31 @@ func validDomain(domain string) (string, bool) {
 	return "", true
 }
 
-// fetch returns the body and the host that finally served it.
-func fetch(ctx context.Context, client *http.Client, target string) ([]byte, string, error) {
+// fetch returns the body, the host that finally served it, and the leaf
+// certificate when the response carried TLS state.
+func fetch(ctx context.Context, client *http.Client, target string) (fetchResult, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, target, nil)
 	if err != nil {
-		return nil, "", err
+		return fetchResult{}, err
 	}
 	rsp, err := client.Do(req)
 	if err != nil {
-		return nil, "", err
+		return fetchResult{}, err
 	}
 	defer func() { _ = rsp.Body.Close() }()
 
 	if rsp.StatusCode != http.StatusOK {
-		return nil, "", fmt.Errorf("HTTP %d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode))
+		return fetchResult{}, fmt.Errorf("HTTP %d %s", rsp.StatusCode, http.StatusText(rsp.StatusCode))
 	}
 	body, err := io.ReadAll(&io.LimitedReader{R: rsp.Body, N: maxKeyBytes})
 	if err != nil {
-		return nil, "", err
+		return fetchResult{}, err
 	}
-	return body, rsp.Request.URL.Host, nil
+	var leaf *x509.Certificate
+	if rsp.TLS != nil && len(rsp.TLS.PeerCertificates) > 0 {
+		leaf = rsp.TLS.PeerCertificates[0]
+	}
+	return fetchResult{body: body, host: rsp.Request.URL.Host, leaf: leaf}, nil
 }
 
 // describe summarises a body that is not a PEM block, so the operator can tell
@@ -262,4 +284,6 @@ func main() {
 	fmt.Printf("\nPairing link: https://tesla.com/_ak/%s\n", domain)
 	fmt.Printf("Use it exactly as shown; a trailing slash breaks the link.\n")
 	fmt.Printf("This does not check that the key is registered with Tesla's partner endpoint.\n")
+	fmt.Printf("It also cannot validate developer.tesla.com \"Domain is invalid\" checks:\n")
+	fmt.Printf("those run against a private CA allowlist on Tesla's side (see issues #159, #477).\n")
 }

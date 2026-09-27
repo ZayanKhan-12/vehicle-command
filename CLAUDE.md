@@ -527,6 +527,36 @@ sometimes decrease while a vehicle is actively charging. The reporter's own capt
 it is relayed from Tesla's servers — and a maintainer has labelled the issue **Fleetnet**, Tesla's
 own tag for backend problems. The useful contribution there is a better capture, not a patch.
 
+### Worked example: dashboard "Domain is invalid" (issue #477)
+
+The Client Details step of `developer.tesla.com` rejects Allowed Origins with one generic message
+covering three checks (public CA, no "Tesla" in the name, no reverse proxy). Those checks run in
+Tesla's `/api/dcv` **before an application exists**, so this repository cannot pass or fail them,
+and the Support Inquiry link that would reach a human only appears *after* you have an application
+— the catch-22 the issue describes. Say so; do not look for a code fix here.
+
+What *is* observable from outside, taking #477's `www.vanmook.net` as the specimen (checked
+2026-09-27):
+
+- The well-known public key is a valid P-256 PEM at the documented path. That is the *vehicle
+  enrollment* requirement this repository cares about. It is **not** what the Client Details
+  wizard is validating when it says "Domain is invalid".
+- Certificate Transparency for `vanmook.net` shows the current leaf issued by Let's Encrypt
+  **YR2** (ISRG Root YR / short-lived hierarchy). Issue #159 already established that the
+  dashboard uses a private CA allowlist that lags public trust: a browser-trusted cert can still
+  fail DCV. Encoding that allowlist in this tool would be guessing.
+- The same CT history shows earlier leaves from Cloudflare's TLS issuing CA, and SANs that once
+  included `teslamate.vanmook.net`. The error text also forbids reverse proxies and the substring
+  "Tesla"; either historical signal could matter on Tesla's side, and neither is something this
+  SDK can clear.
+
+Related: #473 reported the same message and closed as blocked inbound 443 on the reporter's
+side; #451 sees `rejectedDomains` from `/api/dcv` even with a Sectigo leaf that should be
+allowlisted. The failing check is Tesla-side and opaque. Point reporters at the evidence, at
+trying an Allowed Origin whose *current* leaf is on a long-known public CA and whose name never
+contained "tesla", and at `tesla-key-check`, which now prints the leaf issuer so the CA question
+is a fact rather than a forum guess.
+
 ## Public key enrollment, and why those issues are hard to answer
 
 Before a vehicle will accept commands, the application's public key has to be enrolled on it. Three
@@ -547,14 +577,17 @@ It is deliberately conservative about what it asserts:
 
 - **It checks only what is documented.** Reachability, PEM structure, key type and curve, and
   optionally that the published key is the one you hold. Nothing else.
-- **It does not check the certificate authority.** A Tesla engineer named a CA allowlist on #159 in
-  2024, and the thread then contradicted itself repeatedly — Amazon certificates working for one
-  developer and not another, Let's Encrypt working for one and not another. Encoding an unverifiable
-  rule would produce confident wrong answers, which is worse than the silence it replaces.
+- **It prints the TLS leaf issuer, and does not judge it.** A Tesla engineer named a CA allowlist
+  on #159 in 2024, and the thread then contradicted itself repeatedly — Amazon certificates
+  working for one developer and not another, Let's Encrypt working for one and not another.
+  Encoding an unverifiable rule would produce confident wrong answers. The issuer line exists so
+  that dashboard "Domain is invalid" reports (#477) can quote a fact rather than speculate.
 - **It does not check the domain name.** The "remove tesla from your DNS name" advice on that same
-  thread was contested by maintainers and appears not to be a rule.
+  thread was contested by maintainers and appears not to be a rule — though the dashboard error
+  text still mentions it, so treat that as Tesla's to enforce.
 - **It says what it cannot see.** Partner registration is Tesla-side, and the output says so rather
-  than implying a pass means enrollment will work.
+  than implying a pass means enrollment will work. Dashboard DCV is also Tesla-side; a green
+  `tesla-key-check` does not mean Client Details will accept the Allowed Origin.
 
 The `_ak` link is printed without a trailing slash on purpose: a trailing slash breaks it, which
 took the #159 thread months to establish.

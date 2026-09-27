@@ -228,7 +228,10 @@ tesla-key-check -public-key public_key.pem example.com
 ```
 
 It reports each requirement separately and exits non-zero if any fails. It
-cannot check registration with the partner endpoint, which is Tesla-side.
+prints the TLS leaf issuer for diagnosis but cannot tell whether that issuer
+is on Tesla's private dashboard CA allowlist, and it cannot check registration
+with the partner endpoint. A green result does not mean the developer
+dashboard will accept the domain as an Allowed Origin.
 
 Once your public key is successfully registered, provide vehicle owners with a
 link to `https://tesla.com/_ak/<your_domain_name>`. For example, if you
