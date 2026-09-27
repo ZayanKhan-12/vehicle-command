@@ -657,5 +657,16 @@ It is deliberately conservative about what it asserts:
 The `_ak` link is printed without a trailing slash on purpose: a trailing slash breaks it, which
 took the #159 thread months to establish.
 
+A separate, easy-to-miss consequence of `_ak` enrollment is issue #461: the cloud flow installs a
+**Fleet Manager** (`ROLE_FM`) key. On firmware 2023.38+, Fleet Manager keys can command over Fleet
+API but **cannot authorize BLE commands** — the vehicle returns
+`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`. That is already stated under Roles in
+`pkg/protocol/protocol.md`, but partners hit it from the README's `_ak` instructions, so the root
+README and `cmd/tesla-control/README.md` now say so next to enrollment. Do not "fix" the error in
+the SDK; the workaround is to BLE-pair a separate Owner/Driver key (`add-key-request ... owner
+cloud_key` — form-factor label only, not the same as `_ak`). Closed PR #465 had the same docs and
+was not merged upstream; keep the wording aligned with protocol.md rather than inventing new role
+rules.
+
 If you extend it, keep that line. A diagnostic that guesses is worse than no diagnostic, because
 people believe it.
