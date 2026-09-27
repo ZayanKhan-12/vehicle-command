@@ -264,10 +264,12 @@ anyone can repeat; re-check before repeating the conclusion, because the protobu
 | Light show (#145) | none | none | Tesla roadmap |
 | Fan speed (#154) | none — `fan_status` is reported, not settable | none | Tesla roadmap |
 | Charging phase count (#205) | none — `charger_phases` is reported, not settable | none | Tesla roadmap |
+| Cabin body extras (#481) | none — see worked example below | none | Tesla roadmap |
 
-Four of those six have the report-but-not-command shape, so check for it every time. For #205 in
-particular, `set_charging_amps` is the lever that does exist, and the issue's own commenter notes
-`charger_phases` appears to reflect what the connected charger supports rather than a setting.
+Five of those seven have the report-but-not-command shape (or neither report nor command), so check
+for it every time. For #205 in particular, `set_charging_amps` is the lever that does exist, and the
+issue's own commenter notes `charger_phases` appears to reflect what the connected charger supports
+rather than a setting.
 
 **Light show (#145)** asks for two things and neither exists. Scheduling a show needs the show file
 *on the car*, and light shows are loaded from USB — this protocol has no file transfer at all. The
@@ -315,6 +317,37 @@ One separate thing that recurs on this issue: `window_control` failing for calle
 Fleet API directly is usually the `lat`/`lon` requirement, which Tesla enforces on `close` as an
 anti-theft measure. Vehicles on the command protocol do not need it, which is why the proxy ignores
 those parameters and why the protobuf field is `reserved`.
+
+### Worked example: glovebox, dome lights, child lock, ambient light (issue #481)
+
+Issue #481 asks for BLE commands and state for cabin/body extras that the in-car UI can touch:
+open glovebox, interior/dome lights, child lock (ideally per-door), and ambient lighting colour /
+on-off / brightness. All four fail both protocol checks, and unlike #122 there is also **no
+matching state** to expose. Do not invent actions or guess field numbers.
+
+- **Infotainment (`car_server.proto`).** `VehicleAction` has
+  `VehicleControlFlashLightsAction` — that flashes the *exterior* lights once, already exposed as
+  `Vehicle.FlashLights` / `flash-lights` / `flash_lights`. There is no glovebox, dome-light,
+  child-lock, or ambient-light action. `ClosuresState` in `vehicle.proto` reports doors, trunks,
+  windows, sunroof, lock, valet, sentry, tonneau and display state; nothing for glovebox position,
+  dome lights, child locks, or ambient colour/brightness.
+- **Body control (`vcsec.proto`).** `ClosureMoveRequest` addresses front/rear driver and passenger
+  doors, trunks, charge port and tonneau — not a glovebox. `RKEAction_E` is unlock / lock /
+  remote-drive / auto-secure / wake. `ClosureStatuses` and `VehicleStatus` mirror those same
+  closures; no child-lock or interior-light fields.
+- **Fleet API.** The vehicle-commands reference lists no glovebox, dome-light, child-lock, or
+  ambient-light endpoint. Guest Mode's "Glovebox PIN" is a *restriction* (PIN-protect the
+  glovebox for guests), not a remote open. Ambient accent colour is a vehicle UI setting and is
+  not in Fleet API vehicle state either.
+
+So the answers to the issue's four questions are: (1) not present in the published VCSEC /
+car-server protos — not merely unexposed by this SDK; (2) a contribution that adds APIs without
+new protobufs would be rejected here for the same reason as Summon; (3) these functions are
+almost certainly cabin/body ECU concerns reachable over internal buses, not over the BLE command
+channel this repository speaks; (4) configured ambient colour is not in any `GetVehicleData`
+category returned over BLE today. Re-run the greps before repeating this — the protobufs change —
+but as of the check that wrote this section, inventing methods would be harmful rather than
+helpful for an embedded BLE accessory.
 
 ## Preconditioning, and the three things that word means here
 
