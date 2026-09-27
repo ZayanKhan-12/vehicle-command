@@ -465,22 +465,31 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 	}
 	defer car.Disconnect()
 
-	if err := car.StartSession(ctx); errors.Is(err, protocol.ErrProtocolNotSupported) {
-		p.markUnsupportedVIN(vin)
-		// Establishing the session may have discovered that this account belongs
-		// to a different region, in which case acct.Host now holds it. Record it
-		// before forwarding, so that the forwarded request and every later
-		// request for this subject start in the right place.
-		p.updateDomainForSubject(acct.Subject, acct.Host)
-		p.forwardRequest(acct, w, req)
-		return err
-	} else if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err)
-		return err
+	// wake_up over Fleet API is a plain REST call (Vehicle.Wakeup → inet.Wakeup).
+	// It must not depend on a signed dual-domain handshake: when the car is
+	// asleep that handshake is exactly what fails, and the wake is what is
+	// meant to recover it. The unscoped /api/1/vehicles/{vin}/wake_up path
+	// already bypasses this handler via forwardRequest; /command/wake_up must
+	// behave the same. See issue #468 and the collaborator note there about
+	// why broader "VCSEC-only" domain scoping over inet is not equivalent.
+	if command != "wake_up" {
+		if err := car.StartSession(ctx); errors.Is(err, protocol.ErrProtocolNotSupported) {
+			p.markUnsupportedVIN(vin)
+			// Establishing the session may have discovered that this account belongs
+			// to a different region, in which case acct.Host now holds it. Record it
+			// before forwarding, so that the forwarded request and every later
+			// request for this subject start in the right place.
+			p.updateDomainForSubject(acct.Subject, acct.Host)
+			p.forwardRequest(acct, w, req)
+			return err
+		} else if err != nil {
+			writeJSONError(w, http.StatusInternalServerError, err)
+			return err
+		}
+		defer func() {
+			_ = car.UpdateCachedSessions(p.sessions)
+		}()
 	}
-	defer func() {
-		_ = car.UpdateCachedSessions(p.sessions)
-	}()
 
 	if err = car.Execute(commandToExecuteFunc); err == ErrCommandUseRESTAPI {
 		return err
