@@ -580,6 +580,28 @@ Practical mitigation for accessories (not a fix): keep sessions short, disconnec
 prefer Fleet API / internet where latency allows, and expect the phone key to occupy a slot
 whenever it is in range. Those are operator choices around the hardware bound, not SDK features.
 
+### Worked example: domain-aware proxy handshakes (issue #468)
+
+Issue #468 (and closed PR #470) proposed mapping each proxy command to the domains it needs so
+that `door_lock` would `StartSession` VCSEC only and succeed when Infotainment returns 408. The
+vehicle package already accepts a domain list; the proxy hardcodes `nil` (both). That analysis of
+the *code* is correct. The conclusion about *inet behaviour* is not.
+
+A collaborator clarified on the issue: **over the Internet, commands addressed to VCSEC arrive at
+Infotainment first and are forwarded from there.** If Infotainment is asleep, VCSEC is not
+reachable over Fleet API either. BLE is the different story — VCSEC stays up and can be spoken to
+directly — but `tesla-http-proxy` speaks Fleet API (`inet`), not BLE. Skipping the Infotainment
+handshake for "VCSEC-only" proxy commands would therefore not unlock lock/unlock while the car is
+asleep over inet; it would paper over a race or a different bug. Do not re-land #470's domain map
+without a `-debug` capture that shows otherwise, and do not invent a BLE path inside the HTTP proxy.
+
+What *is* wrong, and was fixed narrowly: `/command/wake_up` used to call `StartSession` before
+`Vehicle.Wakeup`. Over inet, Wakeup is an unsigned REST `POST .../wake_up` — the signed handshake
+is exactly what fails when the car is asleep, so the command meant to recover from sleep could not
+run. The unscoped Fleet API path `/api/1/vehicles/{vin}/wake_up` already bypasses
+`handleVehicleCommand` via `forwardRequest`; `/command/wake_up` now skips `StartSession` the same
+way. Ordinary commands still handshake both domains.
+
 ## Public key enrollment, and why those issues are hard to answer
 
 Before a vehicle will accept commands, the application's public key has to be enrolled on it. Three
