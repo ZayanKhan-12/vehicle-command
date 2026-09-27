@@ -557,6 +557,29 @@ trying an Allowed Origin whose *current* leaf is on a long-known public CA and w
 contained "tesla", and at `tesla-key-check`, which now prints the leaf issuer so the CA question
 is a fact rather than a forum guess.
 
+### Worked example: three BLE connections (issue #469)
+
+Issue #469 asks whether the limit of three concurrent BLE connections to a vehicle can be raised
+so that third-party accessories are not starved by the Tesla phone app holding a slot when in
+range. It cannot be raised from this repository.
+
+The protocol documentation already states the bound as a **VCSEC hardware constraint**, not an
+SDK policy (`pkg/protocol/protocol.md`):
+
+> Due to hardware constraints, VCSEC can only reliably maintain up to three simultaneous BLE
+> connections. These are shared by keyfobs, phone keys, and third-party clients…
+
+`pkg/connector/ble` does not count connections up to three and then refuse. It reads the
+vehicle's advertisement: when the slots are full the peripheral is marked non-connectable, and
+the connector returns `ErrMaxConnectionsExceeded`. Changing that error, adding a config knob, or
+opening more local sockets would not create a fourth slot on the car. Raising the limit is a
+Tesla firmware / hardware roadmap item; the honest answer on the issue is the protocol note,
+not an implementation.
+
+Practical mitigation for accessories (not a fix): keep sessions short, disconnect promptly,
+prefer Fleet API / internet where latency allows, and expect the phone key to occupy a slot
+whenever it is in range. Those are operator choices around the hardware bound, not SDK features.
+
 ## Public key enrollment, and why those issues are hard to answer
 
 Before a vehicle will accept commands, the application's public key has to be enrolled on it. Three
