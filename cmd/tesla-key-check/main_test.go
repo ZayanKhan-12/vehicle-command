@@ -90,7 +90,7 @@ func TestPublishedKeyIsAccepted(t *testing.T) {
 	key := p256Key(t)
 	checks := run(t, serving(t, pemPublicKey(t, &key.PublicKey)), "example.com", nil)
 
-	for _, name := range []string{"domain", "fetch", "pem", "key"} {
+	for _, name := range []string{"domain", "fetch", "tls", "pem", "key"} {
 		c, ok := checks[name]
 		if !ok {
 			t.Errorf("check %q did not run", name)
@@ -102,6 +102,9 @@ func TestPublishedKeyIsAccepted(t *testing.T) {
 	}
 	if _, ok := checks["redirect"]; ok {
 		t.Error("a redirect was reported where none happened")
+	}
+	if tls := checks["tls"]; !strings.Contains(tls.detail, "issuer=") {
+		t.Errorf("tls detail %q should name the leaf issuer", tls.detail)
 	}
 }
 
