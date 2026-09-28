@@ -256,6 +256,11 @@ func (v *Vehicle) Send(ctx context.Context, domain universal.Domain, payload []b
 	}
 }
 
+// Wakeup starts the infotainment system if it is asleep. It does not inhibit
+// subsequent sleep. There is no published VehicleAction to keep infotainment
+// awake (teslamotors/vehicle-command#397); callers that ask for that get
+// protocol.ErrKeepAwakeNotInProtocol from tesla-control keep-awake and the
+// proxy keep_awake / keep_alive paths.
 func (v *Vehicle) Wakeup(ctx context.Context) error {
 	if oapi, ok := v.conn.(connector.FleetAPIConnector); ok {
 		return oapi.Wakeup(ctx)

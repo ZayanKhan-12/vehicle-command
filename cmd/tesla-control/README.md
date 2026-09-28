@@ -54,6 +54,12 @@ the published vehicle command protocol. `tesla-control wifi` returns
 `ErrWiFiNotInProtocol` and does not send credentials. See
 [issue #419](https://github.com/teslamotors/vehicle-command/issues/419).
 
+`tesla-control wake` starts infotainment if it is asleep; it does not keep
+the vehicle awake. `keep-accessory-power` is the published 12V / charging-USB
+setting and does not power the glovebox dashcam USB.
+`tesla-control keep-awake` returns `ErrKeepAwakeNotInProtocol`. See
+[issue #397](https://github.com/teslamotors/vehicle-command/issues/397).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

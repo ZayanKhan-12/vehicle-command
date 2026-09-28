@@ -82,6 +82,11 @@ make proto-gen   # requires protoc + protoc-gen-go
   published VehicleAction field numbers. Do not invent unused oneof tags
   (PSK leakage / firmware collision). Return `protocol.ErrWiFiNotInProtocol`.
   Telemetry is teslamotors/fleet-telemetry#407, not this repo.
+* There is no published VehicleAction to keep infotainment awake. `wake`
+  only starts infotainment; `SetKeepAccessoryPowerMode` does not power the
+  glovebox dashcam USB. Do not invent a keep-alive oneof or wrap
+  `charge-port-close` as keep-awake. Return
+  `protocol.ErrKeepAwakeNotInProtocol`. See teslamotors/vehicle-command#397.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

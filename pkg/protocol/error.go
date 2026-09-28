@@ -64,9 +64,17 @@ var (
 	// numbers would collide with firmware and could leak a PSK on the wire.
 	// Connectivity telemetry is teslamotors/fleet-telemetry#407, not this SDK.
 	// See teslamotors/vehicle-command#419.
-	ErrWiFiNotInProtocol   = NewError("WiFi configuration is not in the published vehicle command protocol (no VehicleAction for enable, add-network, forget, or connect-in-drive); see teslamotors/vehicle-command#419", false, false)
-	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
+	ErrWiFiNotInProtocol = NewError("WiFi configuration is not in the published vehicle command protocol (no VehicleAction for enable, add-network, forget, or connect-in-drive); see teslamotors/vehicle-command#419", false, false)
+	// ErrKeepAwakeNotInProtocol indicates a client asked to inhibit infotainment
+	// sleep (keep the car "awake") without Sentry Mode. wake / RKE_ACTION_WAKE_VEHICLE
+	// starts infotainment but does not prevent later sleep. SetKeepAccessoryPowerMode
+	// powers the 12V jack and charging USB ports, not the glovebox dashcam/data
+	// USB. Tesla has not published a VehicleAction for a keep-alive. Wrapping an
+	// Infotainment mutation (for example charge-port-close) as a library keep-alive
+	// would change vehicle state and fight designed sleep. See teslamotors/vehicle-command#397.
+	ErrKeepAwakeNotInProtocol = NewError("the published vehicle command protocol has no keep-awake action; wake starts infotainment but does not inhibit sleep, and keep-accessory-power does not power the glovebox dashcam USB; see teslamotors/vehicle-command#397", false, false)
+	ErrRequiresEncryption     = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext    = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

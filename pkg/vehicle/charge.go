@@ -317,6 +317,8 @@ func (v *Vehicle) SetLowPowerMode(ctx context.Context, enable bool) error {
 // SetKeepAccessoryPowerMode enables or disables accessory power mode. Phone chargers, USB ports,
 // and low voltage outlets remain powered after exit until the vehicle enters Low Power Mode. When
 // enabled, this feature consumes additional energy even if no devices are connected.
+// Tesla firmware does not apply this setting to the glovebox dashcam/data USB
+// port (teslamotors/vehicle-command#397). It is not a keep-infotainment-awake command.
 func (v *Vehicle) SetKeepAccessoryPowerMode(ctx context.Context, enable bool) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

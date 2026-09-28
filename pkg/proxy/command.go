@@ -73,6 +73,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// In-car UX exists; Tesla has not published VehicleAction numbers. Do not
 		// invent fields or send a PSK. teslamotors/vehicle-command#419.
 		return nil, protocol.ErrWiFiNotInProtocol
+	case "keep_awake", "keep_alive":
+		// wake does not inhibit sleep; Tesla has not published a keep-awake
+		// VehicleAction. Do not wrap charge-port-close. teslamotors/vehicle-command#397.
+		return nil, protocol.ErrKeepAwakeNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

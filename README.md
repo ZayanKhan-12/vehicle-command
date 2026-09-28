@@ -323,6 +323,13 @@ The proxy returns HTTP 400 (`protocol.ErrWiFiNotInProtocol`) for those paths
 and does not send a PSK. Connectivity telemetry is
 [fleet-telemetry#407](https://github.com/teslamotors/fleet-telemetry/issues/407).
 
+There is no published keep-awake command
+([issue #397](https://github.com/teslamotors/vehicle-command/issues/397)).
+`wake` starts infotainment but does not inhibit sleep.
+`keep_accessory_power_mode` powers the 12V jack and charging USB ports, not
+the glovebox dashcam USB. The proxy returns HTTP 400
+(`protocol.ErrKeepAwakeNotInProtocol`) for `keep_awake` / `keep_alive`.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

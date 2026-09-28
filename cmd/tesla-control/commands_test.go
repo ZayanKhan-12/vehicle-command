@@ -142,3 +142,17 @@ func TestWifiCommandReturnsProtocolError(t *testing.T) {
 		t.Fatalf("wifi handler = %v, want ErrWiFiNotInProtocol", err)
 	}
 }
+
+func TestKeepAwakeCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["keep-awake"]
+	if !ok {
+		t.Fatal("missing keep-awake")
+	}
+	if info.requiresFleetAPI {
+		t.Error("keep-awake help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrKeepAwakeNotInProtocol) {
+		t.Fatalf("keep-awake handler = %v, want ErrKeepAwakeNotInProtocol", err)
+	}
+}

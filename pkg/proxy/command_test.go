@@ -38,6 +38,8 @@ func TestExtractCommandAction(t *testing.T) {
 		{"add_wifi_network", proxy.RequestParameters{"ssid": "depot", "security": "wpa2", "psk": "secret"}, nil, protocol.ErrWiFiNotInProtocol},
 		{"forget_wifi_network", proxy.RequestParameters{"ssid": "depot"}, nil, protocol.ErrWiFiNotInProtocol},
 		{"wifi_connect_in_drive", proxy.RequestParameters{"on": true}, nil, protocol.ErrWiFiNotInProtocol},
+		{"keep_awake", nil, nil, protocol.ErrKeepAwakeNotInProtocol},
+		{"keep_alive", nil, nil, protocol.ErrKeepAwakeNotInProtocol},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2}, nil, nil},
 		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": 1.0}, nil, nil},
