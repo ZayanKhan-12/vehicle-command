@@ -3,6 +3,7 @@ package protocol
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -166,6 +167,28 @@ func IsNominalError(err error) bool {
 	}
 	var nErr *NominalError
 	return errors.As(err, &nErr)
+}
+
+// CarCommandPrefix is prepended to the vehicle's plaintext ResultReason when
+// infotainment refuses a command. The proxy copies the full string into
+// response.reason (HTTP 200).
+const CarCommandPrefix = "car could not execute command: "
+
+// CommandRefusalReason returns the vehicle's plaintext refusal, for example
+// "low_power_mode_low_soc", or "" if err is not a [NominalError] from
+// infotainment. These strings are defined by vehicle firmware, not this
+// library, and new reasons appear without a protocol change. See
+// teslamotors/vehicle-command#425.
+func CommandRefusalReason(err error) string {
+	var nErr *NominalError
+	if !errors.As(err, &nErr) {
+		return ""
+	}
+	msg := nErr.Error()
+	if reason, ok := strings.CutPrefix(msg, CarCommandPrefix); ok {
+		return reason
+	}
+	return ""
 }
 
 // NominalVCSECError indicates the vehicle security controller received and authenticated a command,

@@ -33,6 +33,10 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
+		{"auto_conditioning_start", nil, nil, nil},
+		{"auto_conditioning_start", proxy.RequestParameters{"manual_override": true}, nil, nil},
+		{"auto_conditioning_start", proxy.RequestParameters{"manual_override": false}, nil, nil},
+		{"auto_conditioning_start", proxy.RequestParameters{"manual_override": "yes"}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid manual_override param")}},
 	}
 
 	for _, test := range tests {

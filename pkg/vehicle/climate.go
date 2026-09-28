@@ -35,26 +35,36 @@ func (v *Vehicle) SetSeatCooler(ctx context.Context, level Level, seat SeatPosit
 		})
 }
 
+// ClimateOn turns on climate control. Vehicles that have entered low-power mode
+// because of a low battery may refuse with reason low_power_mode_low_soc. The
+// Tesla mobile app shows a confirmation in that case; send the same override
+// with [Vehicle.SetClimate] (manualOverride true) or POST
+// auto_conditioning_start with {"manual_override": true}. See
+// teslamotors/vehicle-command#425.
 func (v *Vehicle) ClimateOn(ctx context.Context) error {
-	return v.executeCarServerAction(ctx,
-		&carserver.Action_VehicleAction{
-			VehicleAction: &carserver.VehicleAction{
-				VehicleActionMsg: &carserver.VehicleAction_HvacAutoAction{
-					HvacAutoAction: &carserver.HvacAutoAction{
-						PowerOn: true,
-					},
-				},
-			},
-		})
+	return v.SetClimate(ctx, true, false)
 }
 
+// ClimateOff turns off climate control.
 func (v *Vehicle) ClimateOff(ctx context.Context) error {
+	return v.SetClimate(ctx, false, false)
+}
+
+// SetClimate turns climate control on or off.
+//
+// If manualOverride is true, the vehicle is asked to apply the request even
+// when it would otherwise refuse because of low state of charge (the same
+// confirmation the Tesla app presents). Firmware still has the last word and
+// may refuse for other reasons. manual_override is already a field on
+// [carserver.HvacAutoAction]; ClimateOn historically left it unset.
+func (v *Vehicle) SetClimate(ctx context.Context, on, manualOverride bool) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
 			VehicleAction: &carserver.VehicleAction{
 				VehicleActionMsg: &carserver.VehicleAction_HvacAutoAction{
 					HvacAutoAction: &carserver.HvacAutoAction{
-						PowerOn: false,
+						PowerOn:        on,
+						ManualOverride: manualOverride,
 					},
 				},
 			},

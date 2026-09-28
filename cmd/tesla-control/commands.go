@@ -100,6 +100,17 @@ func GetDegree(degStr string) (float32, error) {
 	return float32(deg), nil
 }
 
+// isClimateForce reports whether a climate-on FORCE argument requests the
+// low-SOC override (HvacAutoAction.manual_override).
+func isClimateForce(selector string) bool {
+	switch strings.ToLower(selector) {
+	case "force", "override":
+		return true
+	default:
+		return false
+	}
+}
+
 func GetDays(days string) (int32, error) {
 	var mask int32
 	for _, d := range strings.Split(days, ",") {
@@ -320,8 +331,11 @@ var commands = map[string]*Command{
 		help:             "Turn on climate control",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
-		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
-			return car.ClimateOn(ctx)
+		optional: []Argument{
+			{name: "FORCE", help: "Set to 'force' to override a low-SOC / low-power-mode refusal (same confirmation as the Tesla app). Omit for the default request."},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			return car.SetClimate(ctx, true, isClimateForce(args["FORCE"]))
 		},
 	},
 	"climate-off": {

@@ -118,3 +118,30 @@ func TestRetriableError(t *testing.T) {
 		}
 	}
 }
+
+func TestCommandRefusalReason(t *testing.T) {
+	t.Parallel()
+	if got := CommandRefusalReason(nil); got != "" {
+		t.Errorf("nil = %q", got)
+	}
+	if got := CommandRefusalReason(errors.New("nope")); got != "" {
+		t.Errorf("plain error = %q", got)
+	}
+
+	car := &NominalError{Details: NewError(CarCommandPrefix+"low_power_mode_low_soc", false, false)}
+	if got := CommandRefusalReason(car); got != "low_power_mode_low_soc" {
+		t.Errorf("got %q, want low_power_mode_low_soc", got)
+	}
+	wrapped := fmt.Errorf("climate: %w", car)
+	if got := CommandRefusalReason(wrapped); got != "low_power_mode_low_soc" {
+		t.Errorf("wrapped got %q", got)
+	}
+	if !IsNominalError(wrapped) {
+		t.Error("wrapped NominalError should still classify")
+	}
+
+	other := &NominalError{Details: errors.New("already locked")}
+	if got := CommandRefusalReason(other); got != "" {
+		t.Errorf("non-prefixed nominal = %q, want empty", got)
+	}
+}

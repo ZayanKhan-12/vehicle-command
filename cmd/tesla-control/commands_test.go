@@ -62,3 +62,13 @@ func TestGetDays(t *testing.T) {
 		}
 	}
 }
+
+func TestIsClimateForce(t *testing.T) {
+	t.Parallel()
+	if isClimateForce("") || isClimateForce("on") || isClimateForce("true") {
+		t.Error("empty and unrelated tokens must not enable override")
+	}
+	if !isClimateForce("force") || !isClimateForce("FORCE") || !isClimateForce("override") {
+		t.Error("force/override must enable override")
+	}
+}

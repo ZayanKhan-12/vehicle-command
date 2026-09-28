@@ -310,6 +310,16 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+If a command is authenticated but the car refuses it, the proxy still returns
+HTTP 200 with `response.result=false` and `response.reason` set to
+`car could not execute command: <firmware_string>`. Those firmware strings are
+not a closed list; `low_power_mode_low_soc` is the climate-at-low-battery
+example from [issue #425](https://github.com/teslamotors/vehicle-command/issues/425).
+See the [proxy package docs](https://pkg.go.dev/github.com/teslamotors/vehicle-command/pkg/proxy).
+
+To match the Tesla app's confirmation when climate is blocked by low SOC, POST
+`{"manual_override": true}` to `auto_conditioning_start` (or `tesla-control climate-on force`).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

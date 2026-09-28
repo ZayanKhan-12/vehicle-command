@@ -85,7 +85,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.ToggleMediaPlayback(ctx) }, nil
 	// Climate Controls
 	case "auto_conditioning_start":
-		return func(v *vehicle.Vehicle) error { return v.ClimateOn(ctx) }, nil
+		override, err := params.getBool("manual_override", false)
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error { return v.SetClimate(ctx, true, override) }, nil
 	case "auto_conditioning_stop":
 		return func(v *vehicle.Vehicle) error { return v.ClimateOff(ctx) }, nil
 	case "charge_max_range":
