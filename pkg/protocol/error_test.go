@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -116,5 +117,15 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrKeyNameRequiresFleetAPI(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrKeyNameRequiresFleetAPI) || MayHaveSucceeded(ErrKeyNameRequiresFleetAPI) || ShouldRetry(ErrKeyNameRequiresFleetAPI) {
+		t.Fatal("key-name Fleet requirement is permanent and must not retry")
+	}
+	if !errors.Is(fmt.Errorf("rename: %w", ErrKeyNameRequiresFleetAPI), ErrKeyNameRequiresFleetAPI) {
+		t.Fatal("callers must be able to errors.Is the Fleet-only key name error")
 	}
 }

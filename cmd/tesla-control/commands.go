@@ -161,7 +161,7 @@ func configureFlags(c *cli.Config, commandName string, forceBLE bool) error {
 	}
 	if forceBLE {
 		if info.requiresFleetAPI {
-			return ErrRequiresOAuth
+			return fleetCommandBlockedByBLE(commandName)
 		}
 	} else {
 		c.Flags |= cli.FlagOAuth
@@ -181,6 +181,13 @@ var (
 	ErrRequiresPrivateKey = errors.New("command requires a private key")
 	ErrUnknownCommand     = errors.New("unrecognized command")
 )
+
+func fleetCommandBlockedByBLE(commandName string) error {
+	if commandName == "rename-key" {
+		return protocol.ErrKeyNameRequiresFleetAPI
+	}
+	return ErrRequiresOAuth
+}
 
 func checkReadiness(commandName string, havePrivateKey, haveOAuth, haveVIN bool) (*Command, error) {
 	info, ok := commands[commandName]
@@ -378,6 +385,31 @@ var commands = map[string]*Command{
 			return car.AddKeyWithRole(ctx, publicKey, keys.Role(role), vcsec.KeyFormFactor(formFactor))
 		},
 	},
+	"update-key": {
+		help:             "Update ROLE and FORM_FACTOR of an enrolled PUBLIC_KEY over VCSEC (works over BLE). Does not change the Locks-screen name.",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "PUBLIC_KEY", help: "file containing public key (or corresponding private key)"},
+			{name: "ROLE", help: "One of: owner, driver, fm (fleet manager), vehicle_monitor, charging_manager"},
+			{name: "FORM_FACTOR", help: "One of: nfc_card, ios_device, android_device, cloud_key"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			role, ok := keys.Role_value["ROLE_"+strings.ToUpper(args["ROLE"])]
+			if !ok {
+				return fmt.Errorf("%w: invalid ROLE", ErrCommandLineArgs)
+			}
+			formFactor, ok := vcsec.KeyFormFactor_value["KEY_FORM_FACTOR_"+strings.ToUpper(args["FORM_FACTOR"])]
+			if !ok {
+				return fmt.Errorf("%w: unrecognized FORM_FACTOR", ErrCommandLineArgs)
+			}
+			publicKey, err := protocol.LoadPublicKey(args["PUBLIC_KEY"])
+			if err != nil {
+				return fmt.Errorf("invalid public key: %s", err)
+			}
+			return car.UpdateKeyMetadata(ctx, publicKey, keys.Role(role), vcsec.KeyFormFactor(formFactor))
+		},
+	},
 	"add-key-request": {
 		help:             "Request NFC-card approval for an enrolling PUBLIC_KEY with ROLE and FORM_FACTOR",
 		requiresAuth:     false,
@@ -423,7 +455,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"rename-key": {
-		help:             "Change the human-readable name of PUBLIC_KEY to NAME",
+		help:             "Change the Locks-screen name of PUBLIC_KEY to NAME (Fleet API only; names are not stored on the vehicle)",
 		requiresAuth:     false,
 		requiresFleetAPI: true,
 		args: []Argument{

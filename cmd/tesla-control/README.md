@@ -44,6 +44,11 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+The Locks-screen **name** of a key is Tesla account metadata, not something
+stored on the vehicle. `tesla-control -ble rename-key` cannot work; use
+`tesla-control rename-key` with a Fleet API token, or
+`tesla-control -ble update-key` to change role and form factor locally.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

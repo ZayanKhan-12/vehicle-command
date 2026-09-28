@@ -50,8 +50,15 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrKeyNameRequiresFleetAPI indicates a client asked to set the human-readable
+	// key label shown on the vehicle Locks screen. That string is account
+	// metadata at api/1/users/keys, not a VCSEC field. KeyMetadata on the
+	// vehicle only stores form factor. BLE-only apps cannot rename a key;
+	// use [github.com/teslamotors/vehicle-command/pkg/account.Account.UpdateKey]
+	// (tesla-control rename-key without -ble). See teslamotors/vehicle-command#418.
+	ErrKeyNameRequiresFleetAPI = NewError("key display names are stored by Fleet API (api/1/users/keys), not on the vehicle; BLE cannot set them", false, false)
+	ErrRequiresEncryption      = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext     = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

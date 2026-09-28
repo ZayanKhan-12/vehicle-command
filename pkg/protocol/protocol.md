@@ -219,6 +219,20 @@ order to provide roadside assistance, as well as remotely delete (but not add)
 Driver, Guest, and Fleet Manager keys. Vehicles in their default state prevent
 Service keys from authorizing other commands over the Internet.
 
+### Key display names
+
+The Locks screen shows a human-readable label for each enrolled key. That
+string is **not** stored on the vehicle. VCSEC [`KeyMetadata`](protobuf/vcsec.proto)
+only contains `keyFormFactor`. Tesla's account service holds the label
+(`POST api/1/users/keys`, implemented as `Account.UpdateKey` /
+`tesla-control rename-key`). Vehicles fetch it when they have connectivity.
+
+BLE-only clients can enroll keys and update role or form factor locally
+(`Vehicle.AddKey`, `Vehicle.UpdateKeyMetadata` /
+`tesla-control -ble update-key`) but cannot rename the Locks-screen label.
+The library returns [`protocol.ErrKeyNameRequiresFleetAPI`](error.go) in that
+case. See [issue #418](https://github.com/teslamotors/vehicle-command/issues/418).
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them
