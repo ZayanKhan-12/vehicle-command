@@ -44,6 +44,11 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+WiFi provisioning (enable, add SSID/PSK, forget, connect-in-drive) is not in
+the published vehicle command protocol. `tesla-control wifi` returns
+`ErrWiFiNotInProtocol` and does not send credentials. See
+[issue #419](https://github.com/teslamotors/vehicle-command/issues/419).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

@@ -310,6 +310,12 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+WiFi enable / add-network / forget / connect-in-drive is **not** in the
+published signed protocol ([issue #419](https://github.com/teslamotors/vehicle-command/issues/419)).
+The proxy returns HTTP 400 (`protocol.ErrWiFiNotInProtocol`) for those paths
+and does not send a PSK. Connectivity telemetry is
+[fleet-telemetry#407](https://github.com/teslamotors/fleet-telemetry/issues/407).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

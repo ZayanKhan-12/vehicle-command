@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -116,5 +117,15 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrWiFiNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrWiFiNotInProtocol) || MayHaveSucceeded(ErrWiFiNotInProtocol) || ShouldRetry(ErrWiFiNotInProtocol) {
+		t.Fatal("unpublished WiFi commands must not retry")
+	}
+	if !errors.Is(fmt.Errorf("add network: %w", ErrWiFiNotInProtocol), ErrWiFiNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrWiFiNotInProtocol")
 	}
 }

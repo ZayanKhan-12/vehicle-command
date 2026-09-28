@@ -219,6 +219,23 @@ order to provide roadside assistance, as well as remotely delete (but not add)
 Driver, Guest, and Fleet Manager keys. Vehicles in their default state prevent
 Service keys from authorizing other commands over the Internet.
 
+### WiFi configuration
+
+The in-car UX can enable WiFi, add a network (SSID, security, PSK), forget a
+network, and toggle connect-in-drive. Tesla has **not** published
+`VehicleAction` members for those operations. They are also absent from
+independent public firmware dumps of `car_server.proto`. Filling an unused
+oneof number would collide with firmware Tesla cannot update from this
+repository, and could put a PSK on the wire under the wrong tag.
+
+The SDK therefore does not guess field numbers. `protocol.ErrWiFiNotInProtocol`
+is returned for `tesla-control wifi` and for proxy paths `wifi_on`,
+`wifi_off`, `set_wifi`, `add_wifi_network`, `forget_wifi_network`, and
+`wifi_connect_in_drive` (HTTP 400 before a session is opened; the PSK is not
+forwarded). Connectivity *telemetry* (SSID, RSSI, cellular) belongs in
+[fleet-telemetry#407](https://github.com/teslamotors/fleet-telemetry/issues/407),
+not this command SDK. See [issue #419](https://github.com/teslamotors/vehicle-command/issues/419).
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them
