@@ -100,6 +100,18 @@ func GetDegree(degStr string) (float32, error) {
 	return float32(deg), nil
 }
 
+// parseHomelinkDevice interprets a CLI DEVICE argument. A decimal integer is a
+// 0-based in-vehicle UI index; anything else is treated as a device name.
+func parseHomelinkDevice(selector string) vehicle.HomelinkDevice {
+	if selector == "" {
+		return vehicle.HomelinkDevice{}
+	}
+	if n, err := strconv.ParseUint(selector, 10, 32); err == nil {
+		return vehicle.HomelinkByIndex(uint32(n))
+	}
+	return vehicle.HomelinkByName(selector)
+}
+
 func GetDays(days string) (int32, error) {
 	var mask int32
 	for _, d := range strings.Split(days, ",") {
@@ -537,6 +549,30 @@ var commands = map[string]*Command{
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.FlashLights(ctx)
+		},
+	},
+	"homelink": {
+		help:             "Trigger a HomeLink device (garage door / gate)",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "LATITUDE", help: "Current latitude of the vehicle"},
+			{name: "LONGITUDE", help: "Current longitude of the vehicle"},
+		},
+		optional: []Argument{
+			{name: "DEVICE", help: "0-based device index matching the in-vehicle UI, or the device name. Omit to trigger the first configured device."},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			lat, err := GetDegree(args["LATITUDE"])
+			if err != nil {
+				return err
+			}
+			lon, err := GetDegree(args["LONGITUDE"])
+			if err != nil {
+				return err
+			}
+			device := parseHomelinkDevice(args["DEVICE"])
+			return car.TriggerHomelinkDevice(ctx, lat, lon, device)
 		},
 	},
 	"keep-accessory-power": {

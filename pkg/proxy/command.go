@@ -528,7 +528,13 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		if err != nil {
 			return nil, err
 		}
-		return func(v *vehicle.Vehicle) error { return v.TriggerHomelink(ctx, float32(lat), float32(lon)) }, nil
+		device, err := params.homelinkDevice()
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error {
+			return v.TriggerHomelinkDevice(ctx, float32(lat), float32(lon), device)
+		}, nil
 	// Updates
 	case "schedule_software_update":
 		offsetSeconds, err := params.getNumber("offset_sec", true)
@@ -720,6 +726,31 @@ func (p RequestParameters) settingForAutoSeatPosition() (vehicle.SeatPosition, b
 	}
 
 	return seat, enabled, nil
+}
+
+func (p RequestParameters) homelinkDevice() (vehicle.HomelinkDevice, error) {
+	index, err := p.getOptionalUint32("homelink_device_index")
+	if err != nil {
+		return vehicle.HomelinkDevice{}, err
+	}
+	name, err := p.getString("homelink_device_name", false)
+	if err != nil {
+		return vehicle.HomelinkDevice{}, err
+	}
+	return vehicle.HomelinkDevice{Index: index, Name: name}, nil
+}
+
+func (p RequestParameters) getOptionalUint32(key string) (*uint32, error) {
+	value, exists := p[key]
+	if !exists {
+		return nil, nil
+	}
+	num, isFloat64 := value.(float64)
+	if !isFloat64 || num < 0 || num != float64(uint32(num)) {
+		return nil, invalidParamError(key)
+	}
+	v := uint32(num)
+	return &v, nil
 }
 
 func missingParamError(key string) error {

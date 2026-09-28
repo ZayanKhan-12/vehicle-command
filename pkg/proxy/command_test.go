@@ -33,6 +33,14 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2}, nil, nil},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": 1.0}, nil, nil},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": 0.0}, nil, nil},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_name": "Garage Right"}, nil, nil},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5}, nil, &protocol.NominalError{Details: fmt.Errorf("missing lon param")}},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": -1.0}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid homelink_device_index param")}},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": 1.5}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid homelink_device_index param")}},
+		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": "1"}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid homelink_device_index param")}},
 	}
 
 	for _, test := range tests {
