@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -116,5 +117,15 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrKeepAwakeNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrKeepAwakeNotInProtocol) || MayHaveSucceeded(ErrKeepAwakeNotInProtocol) || ShouldRetry(ErrKeepAwakeNotInProtocol) {
+		t.Fatal("unpublished keep-awake must not retry")
+	}
+	if !errors.Is(fmt.Errorf("keep awake: %w", ErrKeepAwakeNotInProtocol), ErrKeepAwakeNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrKeepAwakeNotInProtocol")
 	}
 }

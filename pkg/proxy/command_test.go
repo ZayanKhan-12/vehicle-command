@@ -32,6 +32,8 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", params, func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, 0.0) }, nil},
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
+		{"keep_awake", nil, nil, protocol.ErrKeepAwakeNotInProtocol},
+		{"keep_alive", nil, nil, protocol.ErrKeepAwakeNotInProtocol},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 	}
 

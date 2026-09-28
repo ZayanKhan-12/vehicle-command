@@ -310,6 +310,13 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+There is no published keep-awake command
+([issue #397](https://github.com/teslamotors/vehicle-command/issues/397)).
+`wake` starts infotainment but does not inhibit sleep.
+`keep_accessory_power_mode` powers the 12V jack and charging USB ports, not
+the glovebox dashcam USB. The proxy returns HTTP 400
+(`protocol.ErrKeepAwakeNotInProtocol`) for `keep_awake` / `keep_alive`.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

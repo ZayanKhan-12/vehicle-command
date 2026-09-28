@@ -175,6 +175,26 @@ domain controls locks, remote start, and trunk, among others; The Infotainment
 domain processes the remaining commands. VCSEC can be reached over BLE even
 when infotainment is asleep.
 
+### Keeping infotainment awake
+
+`wake` (`RKE_ACTION_WAKE_VEHICLE` over BLE, or Fleet API wakeup over inet)
+starts infotainment if it is asleep. It does not inhibit subsequent sleep.
+Repeating `wake` has the same limitation. `body-controller-state` talks to
+VCSEC and does not keep infotainment awake.
+
+`SetKeepAccessoryPowerMode` (`tesla-control keep-accessory-power`) is the
+published setting for the 12V jack and charging USB ports. Tesla firmware
+does not apply it to the glovebox dashcam/data USB port.
+
+Tesla has **not** published a `VehicleAction` that keeps infotainment (or the
+dashcam USB) powered for USB offload. Inventing an unused oneof number would
+collide with firmware. The SDK therefore returns
+[`protocol.ErrKeepAwakeNotInProtocol`](error.go) for `tesla-control keep-awake`
+and proxy paths `keep_awake` / `keep_alive` (HTTP 400 before a session).
+Wrapping an Infotainment mutation (for example `charge-port-close`) as a
+library keep-alive is not supported: it changes vehicle state and fights
+designed sleep. See [issue #397](https://github.com/teslamotors/vehicle-command/issues/397).
+
 ### Time
 
 Each domain has its own clock and represents time using `(epoch_id,

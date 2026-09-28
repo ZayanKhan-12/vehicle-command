@@ -44,6 +44,12 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+`tesla-control wake` starts infotainment if it is asleep; it does not keep
+the vehicle awake. `keep-accessory-power` is the published 12V / charging-USB
+setting and does not power the glovebox dashcam USB.
+`tesla-control keep-awake` returns `ErrKeepAwakeNotInProtocol`. See
+[issue #397](https://github.com/teslamotors/vehicle-command/issues/397).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

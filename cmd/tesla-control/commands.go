@@ -540,7 +540,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"keep-accessory-power": {
-		help:             "Set keep accessory power mode to STATE ('on' or 'off')",
+		help:             "Set keep accessory power (12V jack and charging USB, not glovebox dashcam port) to STATE ('on' or 'off')",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{
@@ -771,11 +771,19 @@ var commands = map[string]*Command{
 		},
 	},
 	"wake": {
-		help:             "Wake up vehicle",
+		help:             "Wake infotainment if asleep. Does not inhibit later sleep; see teslamotors/vehicle-command#397.",
 		requiresAuth:     false,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.Wakeup(ctx)
+		},
+	},
+	"keep-awake": {
+		help:             "There is no published command to keep infotainment awake. wake does not inhibit sleep. See teslamotors/vehicle-command#397.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrKeepAwakeNotInProtocol
 		},
 	},
 	"tonneau-open": {
