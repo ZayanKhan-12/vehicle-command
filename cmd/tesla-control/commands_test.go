@@ -62,3 +62,28 @@ func TestGetDays(t *testing.T) {
 		}
 	}
 }
+
+func TestParseHomelinkDevice(t *testing.T) {
+	t.Parallel()
+	if got := parseHomelinkDevice(""); got.Index != nil || got.Name != "" {
+		t.Errorf("empty selector = %+v, want zero value", got)
+	}
+
+	byIndex := parseHomelinkDevice("2")
+	if byIndex.Index == nil || *byIndex.Index != 2 {
+		t.Errorf("index selector = %+v, want Index=2", byIndex)
+	}
+	if byIndex.Name != "" {
+		t.Errorf("index selector set Name %q", byIndex.Name)
+	}
+
+	zero := parseHomelinkDevice("0")
+	if zero.Index == nil || *zero.Index != 0 {
+		t.Errorf("index 0 = %+v, want explicit 0", zero)
+	}
+
+	byName := parseHomelinkDevice("Garage Right")
+	if byName.Index != nil || byName.Name != "Garage Right" {
+		t.Errorf("name selector = %+v, want Name=Garage Right", byName)
+	}
+}

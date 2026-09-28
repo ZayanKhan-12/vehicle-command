@@ -65,7 +65,12 @@ make proto-gen   # requires protoc + protoc-gen-go
   * Wrap with `fmt.Errorf("...: %w", err)`; do not swallow the original.
 * Do not change wire formats (`.proto` files, signature metadata, counters)
   without reading `pkg/protocol/protocol.md`. Vehicles run firmware you cannot
-  update; the client must stay compatible.
+  update; the client must stay compatible. Additive optional fields (new
+  `oneof optional_*` members on an existing message) are the only proto change
+  that is backward compatible: older firmware ignores unknown fields. Never
+  reuse or renumber existing fields. After editing a `.proto`, regenerate with
+  `make proto-gen` using the `protoc` / `protoc-gen-go` versions recorded in
+  the generated file header.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

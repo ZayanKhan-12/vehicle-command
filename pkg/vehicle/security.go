@@ -224,17 +224,64 @@ func (v *Vehicle) SetPINToDrive(ctx context.Context, enabled bool, pin string) e
 		})
 }
 
+// HomelinkDevice identifies which HomeLink device to trigger. The zero value
+// means "first configured device", matching the historical API and the
+// in-vehicle default.
+//
+// Tesla vehicles typically expose up to three devices in the UI; Index is
+// 0-based in that order. If both Index and Name are set, Index takes
+// precedence.
+//
+// Currently shipping vehicle firmware ignores these fields (protobuf unknown-
+// field semantics) and continues to trigger the first device. Encoding them
+// now lets a future firmware release honor the selector without a further
+// client change. See teslamotors/vehicle-command#416.
+type HomelinkDevice struct {
+	Index *uint32
+	Name  string
+}
+
+// HomelinkByIndex selects the HomeLink device at the given 0-based UI index.
+func HomelinkByIndex(index uint32) HomelinkDevice {
+	return HomelinkDevice{Index: &index}
+}
+
+// HomelinkByName selects the HomeLink device whose in-vehicle name matches name.
+func HomelinkByName(name string) HomelinkDevice {
+	return HomelinkDevice{Name: name}
+}
+
+// TriggerHomelink activates the first configured HomeLink device (garage door,
+// gate, etc.). latitude and longitude should be the vehicle's current
+// coordinates; the vehicle rejects the command if they are too far from its
+// actual position.
 func (v *Vehicle) TriggerHomelink(ctx context.Context, latitude float32, longitude float32) error {
+	return v.TriggerHomelinkDevice(ctx, latitude, longitude, HomelinkDevice{})
+}
+
+// TriggerHomelinkDevice activates a specific HomeLink device. Passing a zero
+// HomelinkDevice is equivalent to [Vehicle.TriggerHomelink].
+func (v *Vehicle) TriggerHomelinkDevice(ctx context.Context, latitude float32, longitude float32, device HomelinkDevice) error {
+	action := &carserver.VehicleControlTriggerHomelinkAction{
+		Location: &carserver.LatLong{
+			Latitude:  latitude,
+			Longitude: longitude,
+		},
+	}
+	if device.Index != nil {
+		action.OptionalHomelinkDeviceIndex = &carserver.VehicleControlTriggerHomelinkAction_HomelinkDeviceIndex{
+			HomelinkDeviceIndex: *device.Index,
+		}
+	} else if name := strings.TrimSpace(device.Name); name != "" {
+		action.OptionalHomelinkDeviceName = &carserver.VehicleControlTriggerHomelinkAction_HomelinkDeviceName{
+			HomelinkDeviceName: name,
+		}
+	}
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
 			VehicleAction: &carserver.VehicleAction{
 				VehicleActionMsg: &carserver.VehicleAction_VehicleControlTriggerHomelinkAction{
-					VehicleControlTriggerHomelinkAction: &carserver.VehicleControlTriggerHomelinkAction{
-						Location: &carserver.LatLong{
-							Latitude:  latitude,
-							Longitude: longitude,
-						},
-					},
+					VehicleControlTriggerHomelinkAction: action,
 				},
 			},
 		})
