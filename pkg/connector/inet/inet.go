@@ -57,9 +57,15 @@ var baseDomainRE = regexp.MustCompile(`use base URL: https://([-a-z0-9.]*)`)
 type HTTPError struct {
 	Code    int
 	Message string
+	// Cause is an optional classified error unwrapped by errors.As / errors.Is,
+	// for example [*AccountDisabledError].
+	Cause error
 }
 
 func (e *HTTPError) Error() string {
+	if e.Cause != nil {
+		return e.Cause.Error()
+	}
 	if e.Message == "" {
 		return http.StatusText(e.Code)
 	}
@@ -78,6 +84,67 @@ func (e *HTTPError) Temporary() bool {
 		e.Code == http.StatusGatewayTimeout ||
 		e.Code == http.StatusRequestTimeout ||
 		e.Code == http.StatusMisdirectedRequest
+}
+
+func (e *HTTPError) Unwrap() error {
+	return e.Cause
+}
+
+// ErrAccountDisabled is returned when Fleet API rejects a request because Tesla
+// has disabled the developer account. This is an account/billing condition,
+// not a vehicle or protocol failure. The client cannot recover except by Tesla
+// restoring the account (typically after a payment method is added at
+// https://developer.tesla.com). See teslamotors/vehicle-command#403.
+var ErrAccountDisabled = protocol.NewError("fleet API account disabled", false, false)
+
+// AccountDisabledError is a classified Fleet API 403 whose body reports
+// "account disabled", optionally with a reason such as EXCEEDED_LIMIT.
+type AccountDisabledError struct {
+	// Reason is the Tesla-supplied suffix, for example "EXCEEDED_LIMIT".
+	Reason string
+	// Body is the raw HTTP response body.
+	Body string
+}
+
+func (e *AccountDisabledError) Error() string {
+	msg := "fleet API account disabled"
+	if e.Reason != "" {
+		msg += ": " + e.Reason
+	}
+	return msg + "; Tesla has placed a billing hold on the developer account. " +
+		"This library cannot lift it. Add a supported payment method at https://developer.tesla.com " +
+		"or contact Tesla developer support. Retrying the command will keep returning 403"
+}
+
+func (e *AccountDisabledError) Unwrap() error {
+	return ErrAccountDisabled
+}
+
+func (e *AccountDisabledError) MayHaveSucceeded() bool {
+	return false
+}
+
+func (e *AccountDisabledError) Temporary() bool {
+	return false
+}
+
+func parseAccountDisabled(body []byte) *AccountDisabledError {
+	var payload struct {
+		Error string `json:"error"`
+	}
+	text := strings.TrimSpace(string(body))
+	if err := json.Unmarshal(body, &payload); err == nil && payload.Error != "" {
+		text = payload.Error
+	}
+	lower := strings.ToLower(text)
+	if !strings.Contains(lower, "account disabled") {
+		return nil
+	}
+	reason := ""
+	if _, suffix, ok := strings.Cut(text, ":"); ok {
+		reason = strings.TrimSpace(suffix)
+	}
+	return &AccountDisabledError{Reason: reason, Body: string(body)}
 }
 
 func SendFleetAPICommand(ctx context.Context, client *http.Client, userAgent, authHeader string, url string, command interface{}) ([]byte, error) {
@@ -132,7 +199,13 @@ func SendFleetAPICommand(ctx context.Context, client *http.Client, userAgent, au
 			return nil, ErrVehicleNotAwake
 		}
 	}
-	return nil, &HTTPError{Code: result.StatusCode, Message: string(body)}
+	httpErr := &HTTPError{Code: result.StatusCode, Message: string(body)}
+	if result.StatusCode == http.StatusForbidden {
+		if acc := parseAccountDisabled(body); acc != nil {
+			httpErr.Cause = acc
+		}
+	}
+	return nil, httpErr
 }
 
 func ValidTeslaDomainSuffix(domain string) bool {

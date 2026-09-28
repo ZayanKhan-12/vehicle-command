@@ -310,6 +310,13 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+If Fleet API returns HTTP 403 with `{"error":"account disabled: EXCEEDED_LIMIT"}`,
+Tesla has placed a billing hold on the developer account. This library maps
+that to [`inet.ErrAccountDisabled`](https://pkg.go.dev/github.com/teslamotors/vehicle-command/pkg/connector/inet#pkg-variables)
+and does not retry. Adding a payment method or restoring the account happens
+in the [Tesla developer portal](https://developer.tesla.com), not in this SDK.
+See [issue #403](https://github.com/teslamotors/vehicle-command/issues/403).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

@@ -23,6 +23,9 @@ func TestHTTPStatusCode(t *testing.T) {
 		{"vehicle asleep wrapped", fmt.Errorf("connect: %w", inet.ErrVehicleNotAwake), http.StatusRequestTimeout},
 		{"key not paired", protocol.ErrKeyNotPaired, http.StatusPreconditionFailed},
 		{"key not paired wrapped", fmt.Errorf("handshake: %w", protocol.ErrKeyNotPaired), http.StatusPreconditionFailed},
+		{"account disabled", inet.ErrAccountDisabled, http.StatusForbidden},
+		{"account disabled wrapped", fmt.Errorf("fleet: %w", inet.ErrAccountDisabled), http.StatusForbidden},
+		{"account disabled classified", &inet.AccountDisabledError{Reason: "EXCEEDED_LIMIT"}, http.StatusForbidden},
 		{"generic error", errors.New("boom"), http.StatusInternalServerError},
 		{"deadline exceeded", context.DeadlineExceeded, http.StatusInternalServerError},
 	}
@@ -60,6 +63,23 @@ func TestWriteJSONErrorStatus(t *testing.T) {
 	writeJSONError(recorder, httpStatusCode(httpErr), httpErr)
 	if recorder.Code != http.StatusTooManyRequests {
 		t.Errorf("HTTPError status = %d, want %d", recorder.Code, http.StatusTooManyRequests)
+	}
+
+	// Account-disabled 403s keep Tesla's JSON body so proxy clients can match
+	// on "EXCEEDED_LIMIT", while errors.Is still classifies the hold.
+	disabledBody := `{"error":"account disabled: EXCEEDED_LIMIT"}`
+	disabledErr := &inet.HTTPError{
+		Code:    http.StatusForbidden,
+		Message: disabledBody,
+		Cause:   &inet.AccountDisabledError{Reason: "EXCEEDED_LIMIT", Body: disabledBody},
+	}
+	recorder = httptest.NewRecorder()
+	writeJSONError(recorder, httpStatusCode(disabledErr), disabledErr)
+	if recorder.Code != http.StatusForbidden {
+		t.Errorf("account-disabled status = %d, want %d", recorder.Code, http.StatusForbidden)
+	}
+	if recorder.Body.String() != disabledBody+"\n" {
+		t.Errorf("account-disabled body = %q, want Tesla payload", recorder.Body.String())
 	}
 
 	// Nominal errors still return 200 with the reason in the response body.

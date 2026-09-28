@@ -187,6 +187,10 @@ func httpStatusCode(err error) int {
 		// Not 401: the OAuth token was accepted, but the vehicle-side key
 		// pairing precondition failed.
 		return http.StatusPreconditionFailed
+	case errors.Is(err, inet.ErrAccountDisabled):
+		// Fleet API returns 403 when Tesla has disabled the developer account
+		// (billing hold / EXCEEDED_LIMIT). The client cannot recover.
+		return http.StatusForbidden
 	default:
 		return http.StatusInternalServerError
 	}
@@ -199,7 +203,14 @@ func writeJSONError(w http.ResponseWriter, code int, err error) {
 	var jsonBytes []byte
 	if errors.As(err, &httpErr) {
 		code = httpErr.Code
-		jsonBytes = []byte(err.Error())
+		// Preserve the Fleet API payload when present so proxy clients see the
+		// same JSON Tesla returned. HTTPError.Error() may be a longer classified
+		// explanation for CLI / library callers.
+		if httpErr.Message != "" {
+			jsonBytes = []byte(httpErr.Message)
+		} else {
+			jsonBytes = []byte(err.Error())
+		}
 	} else {
 		if err == nil {
 			reply.Error = http.StatusText(code)
