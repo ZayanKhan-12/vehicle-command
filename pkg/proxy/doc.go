@@ -35,6 +35,15 @@ keep_accessory_power_mode powers the 12V jack and charging USB ports, not
 the glovebox dashcam/data USB. Tesla has not published a keep-alive
 VehicleAction. See teslamotors/vehicle-command#397.
 
+# Battery option codes
+
+POST battery_size, get_battery_option, or get_battery_size returns HTTP 400
+with [protocol.ErrBatteryOptionRequiresFleetAPI] before opening a vehicle
+session. Pack identity is Tesla catalog metadata
+(GET /api/1/dx/vehicles/options), not a signed command. Tesla often omits
+$BT* codes; this proxy will not invent them. See
+teslamotors/vehicle-command#391.
+
 [Fleet API documentation]: https://developer.tesla.com/docs/fleet-api/getting-started/what-is-fleet-api
 */
 package proxy

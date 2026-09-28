@@ -124,8 +124,30 @@ func TestFleetCommandBlockedByBLE(t *testing.T) {
 	if !errors.Is(fleetCommandBlockedByBLE("rename-key"), protocol.ErrKeyNameRequiresFleetAPI) {
 		t.Fatal("rename-key over BLE must return ErrKeyNameRequiresFleetAPI")
 	}
+	if !errors.Is(fleetCommandBlockedByBLE("options"), protocol.ErrBatteryOptionRequiresFleetAPI) {
+		t.Fatal("options over BLE must return ErrBatteryOptionRequiresFleetAPI")
+	}
+	if !errors.Is(fleetCommandBlockedByBLE("battery-option"), protocol.ErrBatteryOptionRequiresFleetAPI) {
+		t.Fatal("battery-option over BLE must return ErrBatteryOptionRequiresFleetAPI")
+	}
 	if !errors.Is(fleetCommandBlockedByBLE("get"), ErrRequiresOAuth) {
 		t.Fatal("other Fleet commands over BLE still need a generic OAuth error")
+	}
+}
+
+func TestOptionsCommandsRequireFleetAPI(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"options", "battery-option"} {
+		info, ok := commands[name]
+		if !ok {
+			t.Fatalf("missing %s", name)
+		}
+		if !info.requiresFleetAPI {
+			t.Errorf("%s must require Fleet API; $BT* codes are not on the vehicle", name)
+		}
+		if info.requiresAuth {
+			t.Errorf("%s talks to Tesla's catalog, not a signed vehicle session", name)
+		}
 	}
 }
 

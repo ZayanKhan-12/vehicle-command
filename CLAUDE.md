@@ -87,6 +87,13 @@ make proto-gen   # requires protoc + protoc-gen-go
   glovebox dashcam USB. Do not invent a keep-alive oneof or wrap
   `charge-port-close` as keep-awake. Return
   `protocol.ErrKeepAwakeNotInProtocol`. See teslamotors/vehicle-command#397.
+* Battery pack identity (`$BT*` option codes) is Tesla catalog metadata
+  (`GET /api/1/dx/vehicles/options`), not a signed vehicle field. Tesla
+  omits `bt` for many VINs. Do not invent `$BT*` codes from model codes.
+  Return `protocol.ErrBatteryOptionNotInCatalog` when absent.
+  `ChargeState` has SOC/range, not pack kWh. Partner
+  `/api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`) is billed. See
+  teslamotors/vehicle-command#391.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

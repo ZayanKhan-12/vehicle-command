@@ -235,3 +235,15 @@ func TestErrKeepAwakeNotInProtocol(t *testing.T) {
 		t.Fatal("callers must be able to errors.Is ErrKeepAwakeNotInProtocol")
 	}
 }
+
+func TestErrBatteryOptionCatalog(t *testing.T) {
+	t.Parallel()
+	for _, err := range []error{ErrBatteryOptionRequiresFleetAPI, ErrBatteryOptionNotInCatalog} {
+		if Temporary(err) || MayHaveSucceeded(err) || ShouldRetry(err) {
+			t.Fatalf("%v must not retry", err)
+		}
+		if !errors.Is(fmt.Errorf("battery: %w", err), err) {
+			t.Fatalf("callers must be able to errors.Is %v", err)
+		}
+	}
+}

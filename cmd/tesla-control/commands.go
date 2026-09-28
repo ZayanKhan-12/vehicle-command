@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -197,6 +198,9 @@ var (
 func fleetCommandBlockedByBLE(commandName string) error {
 	if commandName == "rename-key" {
 		return protocol.ErrKeyNameRequiresFleetAPI
+	}
+	if commandName == "options" || commandName == "battery-option" {
+		return protocol.ErrBatteryOptionRequiresFleetAPI
 	}
 	return ErrRequiresOAuth
 }
@@ -1078,6 +1082,46 @@ var commands = map[string]*Command{
 				return err
 			}
 			fmt.Println(string(productsJSON))
+			return nil
+		},
+	},
+	"options": {
+		help:             "Print Tesla catalog option codes for VIN (GET /api/1/dx/vehicles/options). Battery ($BT*) is often omitted; see teslamotors/vehicle-command#391.",
+		requiresAuth:     false,
+		requiresFleetAPI: true,
+		args: []Argument{
+			{name: "VIN", help: "Vehicle Identification Number"},
+		},
+		handler: func(ctx context.Context, acct *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			codes, err := acct.GetVehicleOptions(ctx, args["VIN"])
+			if err != nil {
+				return err
+			}
+			out, err := json.MarshalIndent(codes, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+			return nil
+		},
+	},
+	"battery-option": {
+		help:             "Print the catalog $BT* battery option for VIN if Tesla included it. Does not invent codes. See teslamotors/vehicle-command#391.",
+		requiresAuth:     false,
+		requiresFleetAPI: true,
+		args: []Argument{
+			{name: "VIN", help: "Vehicle Identification Number"},
+		},
+		handler: func(ctx context.Context, acct *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			codes, err := acct.GetVehicleOptions(ctx, args["VIN"])
+			if err != nil {
+				return err
+			}
+			opt, err := account.FindBatteryOption(codes)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%s\t%s\n", opt.Code, opt.DisplayName)
 			return nil
 		},
 	},

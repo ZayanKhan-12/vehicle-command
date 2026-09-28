@@ -73,8 +73,19 @@ var (
 	// Infotainment mutation (for example charge-port-close) as a library keep-alive
 	// would change vehicle state and fight designed sleep. See teslamotors/vehicle-command#397.
 	ErrKeepAwakeNotInProtocol = NewError("the published vehicle command protocol has no keep-awake action; wake starts infotainment but does not inhibit sleep, and keep-accessory-power does not power the glovebox dashcam USB; see teslamotors/vehicle-command#397", false, false)
-	ErrRequiresEncryption     = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext    = errors.New("could not decrypt vehicle response without a session")
+	// ErrBatteryOptionRequiresFleetAPI indicates a client asked the signed
+	// vehicle protocol (or BLE) for pack identity / battery size. $BT* codes
+	// are Tesla catalog metadata at GET /api/1/dx/vehicles/options, not a
+	// VehicleAction or ChargeState field. See teslamotors/vehicle-command#391.
+	ErrBatteryOptionRequiresFleetAPI = NewError("battery option codes are Tesla catalog metadata (GET /api/1/dx/vehicles/options), not a signed vehicle command; BLE cannot fetch them. See teslamotors/vehicle-command#391", false, false)
+	// ErrBatteryOptionNotInCatalog indicates Tesla's options response for this
+	// VIN omitted a battery ($BT*) code. This SDK does not invent codes from
+	// model options such as $MT322. ChargeState has SOC/range, not pack kWh.
+	// Partner GET /api/1/vehicles/{vin}/specs (batteryCapacityKwh) is Tesla's
+	// billed alternative. See teslamotors/vehicle-command#391.
+	ErrBatteryOptionNotInCatalog = NewError("Tesla's vehicle options catalog did not include a battery ($BT*) option code; this SDK does not invent them. ChargeState has SOC/range, not pack kWh. Partner GET /api/1/vehicles/{vin}/specs (batteryCapacityKwh) is billed. See teslamotors/vehicle-command#391", false, false)
+	ErrRequiresEncryption        = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext       = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.
