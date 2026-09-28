@@ -33,6 +33,18 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
+		{"set_tent_mode", proxy.RequestParameters{"on": true}, nil, nil},
+		{"set_tent_mode", proxy.RequestParameters{"on": false}, nil, nil},
+		{"set_tent_mode", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing on param")}},
+		{"set_tent_mode", proxy.RequestParameters{"on": "yes"}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid on param")}},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": "medium"}, nil, nil},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": "level"}, nil, nil},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": 3.0}, nil, nil},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": "entry"}, nil, nil},
+		{"set_suspension_level", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing suspension_level param")}},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": "park"}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid suspension_level param")}},
+		{"set_suspension_level", proxy.RequestParameters{"suspension_level": 0.0}, nil, &protocol.NominalError{Details: fmt.Errorf("invalid suspension_level param")}},
+		{"level_suspension", nil, nil, nil},
 	}
 
 	for _, test := range tests {
