@@ -57,8 +57,16 @@ var (
 	// use [github.com/teslamotors/vehicle-command/pkg/account.Account.UpdateKey]
 	// (tesla-control rename-key without -ble). See teslamotors/vehicle-command#418.
 	ErrKeyNameRequiresFleetAPI = NewError("key display names are stored by Fleet API (api/1/users/keys), not on the vehicle; BLE cannot set them", false, false)
-	ErrRequiresEncryption      = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext     = errors.New("could not decrypt vehicle response without a session")
+	// ErrWiFiNotInProtocol indicates a client asked to enable/disable WiFi, add or
+	// forget a network, or toggle connect-in-drive. Those actions exist in the
+	// in-car UX but Tesla has not published VehicleAction field numbers for them
+	// (they are also absent from public firmware dumps). Guessing unused oneof
+	// numbers would collide with firmware and could leak a PSK on the wire.
+	// Connectivity telemetry is teslamotors/fleet-telemetry#407, not this SDK.
+	// See teslamotors/vehicle-command#419.
+	ErrWiFiNotInProtocol   = NewError("WiFi configuration is not in the published vehicle command protocol (no VehicleAction for enable, add-network, forget, or connect-in-drive); see teslamotors/vehicle-command#419", false, false)
+	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

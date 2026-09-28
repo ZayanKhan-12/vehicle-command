@@ -49,6 +49,11 @@ stored on the vehicle. `tesla-control -ble rename-key` cannot work; use
 `tesla-control rename-key` with a Fleet API token, or
 `tesla-control -ble update-key` to change role and form factor locally.
 
+WiFi provisioning (enable, add SSID/PSK, forget, connect-in-drive) is not in
+the published vehicle command protocol. `tesla-control wifi` returns
+`ErrWiFiNotInProtocol` and does not send credentials. See
+[issue #419](https://github.com/teslamotors/vehicle-command/issues/419).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

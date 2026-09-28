@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
@@ -125,5 +126,19 @@ func TestFleetCommandBlockedByBLE(t *testing.T) {
 	}
 	if !errors.Is(fleetCommandBlockedByBLE("get"), ErrRequiresOAuth) {
 		t.Fatal("other Fleet commands over BLE still need a generic OAuth error")
+	}
+}
+
+func TestWifiCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["wifi"]
+	if !ok {
+		t.Fatal("missing wifi")
+	}
+	if info.requiresFleetAPI {
+		t.Error("wifi help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrWiFiNotInProtocol) {
+		t.Fatalf("wifi handler = %v, want ErrWiFiNotInProtocol", err)
 	}
 }

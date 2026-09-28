@@ -881,6 +881,17 @@ var commands = map[string]*Command{
 			return car.Wakeup(ctx)
 		},
 	},
+	"wifi": {
+		help:             "WiFi provision commands are not in the published protocol (enable/add/forget/connect-in-drive). See teslamotors/vehicle-command#419.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		optional: []Argument{
+			{name: "ACTION", help: "enable, disable, add, forget, or connect-in-drive (all return the same protocol error; no PSK is sent)"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrWiFiNotInProtocol
+		},
+	},
 	"tonneau-open": {
 		help:             "Open Cybertruck tonneau.",
 		requiresAuth:     true,

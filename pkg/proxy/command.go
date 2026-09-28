@@ -69,6 +69,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "wifi_on", "wifi_off", "set_wifi", "add_wifi_network", "forget_wifi_network", "wifi_connect_in_drive":
+		// In-car UX exists; Tesla has not published VehicleAction numbers. Do not
+		// invent fields or send a PSK. teslamotors/vehicle-command#419.
+		return nil, protocol.ErrWiFiNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

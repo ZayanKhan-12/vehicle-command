@@ -215,3 +215,13 @@ func TestErrKeyNameRequiresFleetAPI(t *testing.T) {
 		t.Fatal("callers must be able to errors.Is the Fleet-only key name error")
 	}
 }
+
+func TestErrWiFiNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrWiFiNotInProtocol) || MayHaveSucceeded(ErrWiFiNotInProtocol) || ShouldRetry(ErrWiFiNotInProtocol) {
+		t.Fatal("unpublished WiFi commands must not retry")
+	}
+	if !errors.Is(fmt.Errorf("add network: %w", ErrWiFiNotInProtocol), ErrWiFiNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrWiFiNotInProtocol")
+	}
+}

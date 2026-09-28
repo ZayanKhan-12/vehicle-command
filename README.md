@@ -317,6 +317,12 @@ commands (teslamotors/vehicle-command#424). POST `set_tent_mode` with
 empty body. The vehicle must be in Park; unsupported hardware or gear states
 return HTTP 200 with `response.result=false`.
 
+WiFi enable / add-network / forget / connect-in-drive is **not** in the
+published signed protocol ([issue #419](https://github.com/teslamotors/vehicle-command/issues/419)).
+The proxy returns HTTP 400 (`protocol.ErrWiFiNotInProtocol`) for those paths
+and does not send a PSK. Connectivity telemetry is
+[fleet-telemetry#407](https://github.com/teslamotors/fleet-telemetry/issues/407).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

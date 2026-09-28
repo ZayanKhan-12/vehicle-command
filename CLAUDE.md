@@ -78,6 +78,10 @@ make proto-gen   # requires protoc + protoc-gen-go
   `KeyMetadata`. BLE can update role and form factor via
   `WhitelistOperation.updateKeyAndPermissions` (`Vehicle.UpdateKeyMetadata`).
   Callers that ask to rename over BLE get `protocol.ErrKeyNameRequiresFleetAPI`.
+* WiFi enable/add/forget/connect-in-drive is in-car UX only. Tesla has not
+  published VehicleAction field numbers. Do not invent unused oneof tags
+  (PSK leakage / firmware collision). Return `protocol.ErrWiFiNotInProtocol`.
+  Telemetry is teslamotors/fleet-telemetry#407, not this repo.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
