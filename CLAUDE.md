@@ -73,6 +73,11 @@ make proto-gen   # requires protoc + protoc-gen-go
   the generated file header. Tent mode (`SetTentModeRequestAction`, field 94)
   and suspension height (`SetSuspensionLevelAction`, field 118) fill unused
   VehicleAction numbers; do not reuse them.
+* Key display names are Fleet API account metadata (`Account.UpdateKey` /
+  `api/1/users/keys`), not a VCSEC field. Do not add a name string to
+  `KeyMetadata`. BLE can update role and form factor via
+  `WhitelistOperation.updateKeyAndPermissions` (`Vehicle.UpdateKeyMetadata`).
+  Callers that ask to rename over BLE get `protocol.ErrKeyNameRequiresFleetAPI`.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

@@ -216,7 +216,9 @@ func (a *Account) SendVehicleFleetAPICommand(ctx context.Context, vin, endpoint 
 //
 // Vehicles query this information when displaying the list of paired mobile devices and NFC cards
 // in the vehicle's Locks screen. Only the account that first registers a public key can modify its
-// metadata.
+// metadata. The display name is not stored on the vehicle: VCSEC KeyMetadata only carries form
+// factor, so BLE-only clients cannot rename a key. Use [vehicle.Vehicle.UpdateKeyMetadata] to
+// change role or form factor locally. See teslamotors/vehicle-command#418.
 func (a *Account) UpdateKey(ctx context.Context, publicKey *ecdh.PublicKey, name string) error {
 	params := map[string]string{
 		"public_key": fmt.Sprintf("%02x", publicKey.Bytes()),

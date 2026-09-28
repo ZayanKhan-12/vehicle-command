@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -85,5 +87,43 @@ func TestParseHomelinkDevice(t *testing.T) {
 	byName := parseHomelinkDevice("Garage Right")
 	if byName.Index != nil || byName.Name != "Garage Right" {
 		t.Errorf("name selector = %+v, want Name=Garage Right", byName)
+	}
+}
+
+func TestRenameKeyRequiresFleetAPI(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["rename-key"]
+	if !ok {
+		t.Fatal("missing rename-key")
+	}
+	if !info.requiresFleetAPI {
+		t.Error("rename-key must require Fleet API; Locks-screen names are not stored on the vehicle")
+	}
+	if info.requiresAuth {
+		t.Error("rename-key talks to Tesla's account service, not a signed VCSEC session")
+	}
+}
+
+func TestUpdateKeyWorksWithoutFleetAPI(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["update-key"]
+	if !ok {
+		t.Fatal("missing update-key")
+	}
+	if info.requiresFleetAPI {
+		t.Error("update-key must work over BLE")
+	}
+	if !info.requiresAuth {
+		t.Error("update-key must be a signed whitelist operation")
+	}
+}
+
+func TestFleetCommandBlockedByBLE(t *testing.T) {
+	t.Parallel()
+	if !errors.Is(fleetCommandBlockedByBLE("rename-key"), protocol.ErrKeyNameRequiresFleetAPI) {
+		t.Fatal("rename-key over BLE must return ErrKeyNameRequiresFleetAPI")
+	}
+	if !errors.Is(fleetCommandBlockedByBLE("get"), ErrRequiresOAuth) {
+		t.Fatal("other Fleet commands over BLE still need a generic OAuth error")
 	}
 }

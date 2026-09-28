@@ -312,6 +312,22 @@ func (v *Vehicle) AddKeyWithRole(ctx context.Context, publicKey *ecdh.PublicKey,
 	return v.executeWhitelistOperation(ctx, encodedPayload)
 }
 
+// UpdateKeyMetadata updates role and form factor for an already-enrolled public
+// key over VCSEC (BLE or Fleet-tunneled vehicle protocol). This is the local
+// whitelist operation (updateKeyAndPermissions). It does not change the
+// Locks-screen display name; that string is Fleet API account metadata. See
+// [protocol.ErrKeyNameRequiresFleetAPI] and teslamotors/vehicle-command#418.
+func (v *Vehicle) UpdateKeyMetadata(ctx context.Context, publicKey *ecdh.PublicKey, role keys.Role, formFactor vcsec.KeyFormFactor) error {
+	if publicKey.Curve() != ecdh.P256() {
+		return protocol.ErrInvalidPublicKey
+	}
+	encodedPayload, err := proto.Marshal(updateKeyPayload(publicKey, role, formFactor))
+	if err != nil {
+		return err
+	}
+	return v.executeWhitelistOperation(ctx, encodedPayload)
+}
+
 func (v *Vehicle) RemoveKey(ctx context.Context, publicKey *ecdh.PublicKey) error {
 	if publicKey.Curve() != ecdh.P256() {
 		return protocol.ErrInvalidPublicKey
