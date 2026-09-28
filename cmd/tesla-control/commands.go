@@ -615,6 +615,41 @@ var commands = map[string]*Command{
 			return car.SetLowPowerMode(ctx, state)
 		},
 	},
+	"tent-mode": {
+		help:             "Set Cybertruck tent mode to STATE ('on' or 'off'). Vehicle must be in Park.",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "STATE", help: "'on' or 'off'"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			var state bool
+			switch args["STATE"] {
+			case "on":
+				state = true
+			case "off":
+				state = false
+			default:
+				return fmt.Errorf("tent mode state must be 'on' or 'off'")
+			}
+			return car.SetTentMode(ctx, state)
+		},
+	},
+	"suspension-level": {
+		help:             "Set air-suspension ride height to LEVEL (entry, low, medium/level, high, very-high, extract). Vehicle must be in Park.",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "LEVEL", help: "entry, low, medium (alias: level), high, very-high, extract, or 1-6"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			level, err := vehicle.ParseSuspensionLevel(args["LEVEL"])
+			if err != nil {
+				return err
+			}
+			return car.SetSuspensionLevel(ctx, level)
+		},
+	},
 	"charging-set-limit": {
 		help:             "Set charge limit to PERCENT",
 		requiresAuth:     true,

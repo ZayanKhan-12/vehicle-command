@@ -225,6 +225,20 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 			return nil, err
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetKeepAccessoryPowerMode(ctx, on) }, nil
+	case "set_tent_mode":
+		on, err := params.getBool("on", true)
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error { return v.SetTentMode(ctx, on) }, nil
+	case "set_suspension_level":
+		level, err := params.suspensionLevel()
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error { return v.SetSuspensionLevel(ctx, level) }, nil
+	case "level_suspension":
+		return func(v *vehicle.Vehicle) error { return v.LevelSuspension(ctx) }, nil
 	case "charge_standard":
 		return func(v *vehicle.Vehicle) error { return v.ChargeStandardRange(ctx) }, nil
 	case "charge_start":
@@ -738,6 +752,27 @@ func (p RequestParameters) homelinkDevice() (vehicle.HomelinkDevice, error) {
 		return vehicle.HomelinkDevice{}, err
 	}
 	return vehicle.HomelinkDevice{Index: index, Name: name}, nil
+}
+
+func (p RequestParameters) suspensionLevel() (vehicle.SuspensionLevel, error) {
+	if value, exists := p["suspension_level"]; exists {
+		switch v := value.(type) {
+		case string:
+			level, err := vehicle.ParseSuspensionLevel(v)
+			if err != nil {
+				return 0, invalidParamError("suspension_level")
+			}
+			return level, nil
+		case float64:
+			if v != float64(int(v)) || v < 1 || v > 6 {
+				return 0, invalidParamError("suspension_level")
+			}
+			return vehicle.SuspensionLevel(int(v)), nil
+		default:
+			return 0, invalidParamError("suspension_level")
+		}
+	}
+	return 0, missingParamError("suspension_level")
 }
 
 func (p RequestParameters) getOptionalUint32(key string) (*uint32, error) {

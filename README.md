@@ -310,6 +310,13 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+Cybertruck tent mode and air-suspension height are signed infotainment
+commands (teslamotors/vehicle-command#424). POST `set_tent_mode` with
+`{"on": true}`, `set_suspension_level` with `{"suspension_level": "medium"}`
+(or `1`–`6` / `level` as an alias for medium), or `level_suspension` with an
+empty body. The vehicle must be in Park; unsupported hardware or gear states
+return HTTP 200 with `response.result=false`.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

@@ -70,7 +70,9 @@ make proto-gen   # requires protoc + protoc-gen-go
   that is backward compatible: older firmware ignores unknown fields. Never
   reuse or renumber existing fields. After editing a `.proto`, regenerate with
   `make proto-gen` using the `protoc` / `protoc-gen-go` versions recorded in
-  the generated file header.
+  the generated file header. Tent mode (`SetTentModeRequestAction`, field 94)
+  and suspension height (`SetSuspensionLevelAction`, field 118) fill unused
+  VehicleAction numbers; do not reuse them.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

@@ -69,6 +69,7 @@ message VehicleAction {
         VehicleControlResetPinToDriveAction vehicleControlResetPinToDriveAction = 78;
         DrivingClearSpeedLimitPinAdminAction drivingClearSpeedLimitPinAdminAction = 79;
         VehicleControlResetPinToDriveAdminAction vehicleControlResetPinToDriveAdminAction = 89;
+        SetTentModeRequestAction setTentModeRequestAction = 94; // Cybertruck tent mode
         ChargeSchedule addChargeScheduleAction = 97;
         RemoveChargeScheduleAction removeChargeScheduleAction = 98;
         PreconditionSchedule addPreconditionScheduleAction = 99;
@@ -80,6 +81,7 @@ message VehicleAction {
         ParentalControlsAction parentalControlsAction = 111;
         ParentalControlsEnableSettingsAction parentalControlsEnableSettingsAction = 112;
         ParentalControlsSetSpeedLimitAction parentalControlsSetSpeedLimitAction = 113;
+        SetSuspensionLevelAction setSuspensionLevelAction = 118; // Air-suspension ride height
         SetLowPowerModeAction setLowPowerModeAction = 130;
         SetKeepAccessoryPowerModeAction setKeepAccessoryPowerModeAction = 138;
     }
@@ -551,6 +553,25 @@ message ParentalControlsSetSpeedLimitAction {
 }
 
 message VehicleControlResetPinToDriveAdminAction {
+}
+
+message SetTentModeRequestAction {
+    // Cybertruck tent mode. Vehicles typically refuse unless in Park.
+    bool on = 1;
+}
+
+message SetSuspensionLevelAction {
+    enum SuspensionLevel {
+        SUSPENSION_LEVEL_INVALID = 0;
+        SUSPENSION_LEVEL_ENTRY = 1;
+        SUSPENSION_LEVEL_LOW = 2;
+        SUSPENSION_LEVEL_MEDIUM = 3;
+        SUSPENSION_LEVEL_HIGH = 4;
+        SUSPENSION_LEVEL_VERY_HIGH = 5;
+        SUSPENSION_LEVEL_EXTRACT = 6;
+    }
+    // Ride height. Vehicles typically refuse unless in Park.
+    SuspensionLevel suspension_level = 1;
 }
 
 message SetLowPowerModeAction {
