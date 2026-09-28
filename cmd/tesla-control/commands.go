@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -161,7 +162,7 @@ func configureFlags(c *cli.Config, commandName string, forceBLE bool) error {
 	}
 	if forceBLE {
 		if info.requiresFleetAPI {
-			return ErrRequiresOAuth
+			return fleetCommandBlockedByBLE(commandName)
 		}
 	} else {
 		c.Flags |= cli.FlagOAuth
@@ -181,6 +182,13 @@ var (
 	ErrRequiresPrivateKey = errors.New("command requires a private key")
 	ErrUnknownCommand     = errors.New("unrecognized command")
 )
+
+func fleetCommandBlockedByBLE(commandName string) error {
+	if commandName == "options" || commandName == "battery-option" {
+		return protocol.ErrBatteryOptionRequiresFleetAPI
+	}
+	return ErrRequiresOAuth
+}
 
 func checkReadiness(commandName string, havePrivateKey, haveOAuth, haveVIN bool) (*Command, error) {
 	info, ok := commands[commandName]
@@ -956,6 +964,46 @@ var commands = map[string]*Command{
 				return err
 			}
 			fmt.Println(string(productsJSON))
+			return nil
+		},
+	},
+	"options": {
+		help:             "Print Tesla catalog option codes for VIN (GET /api/1/dx/vehicles/options). Battery ($BT*) is often omitted; see teslamotors/vehicle-command#391.",
+		requiresAuth:     false,
+		requiresFleetAPI: true,
+		args: []Argument{
+			{name: "VIN", help: "Vehicle Identification Number"},
+		},
+		handler: func(ctx context.Context, acct *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			codes, err := acct.GetVehicleOptions(ctx, args["VIN"])
+			if err != nil {
+				return err
+			}
+			out, err := json.MarshalIndent(codes, "", "  ")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(out))
+			return nil
+		},
+	},
+	"battery-option": {
+		help:             "Print the catalog $BT* battery option for VIN if Tesla included it. Does not invent codes. See teslamotors/vehicle-command#391.",
+		requiresAuth:     false,
+		requiresFleetAPI: true,
+		args: []Argument{
+			{name: "VIN", help: "Vehicle Identification Number"},
+		},
+		handler: func(ctx context.Context, acct *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			codes, err := acct.GetVehicleOptions(ctx, args["VIN"])
+			if err != nil {
+				return err
+			}
+			opt, err := account.FindBatteryOption(codes)
+			if err != nil {
+				return err
+			}
+			fmt.Printf("%s\t%s\n", opt.Code, opt.DisplayName)
 			return nil
 		},
 	},

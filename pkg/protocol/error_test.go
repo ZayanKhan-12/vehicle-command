@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
@@ -115,6 +116,18 @@ func TestRetriableError(t *testing.T) {
 		err.Code = universal.MessageFault_E(code)
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
+		}
+	}
+}
+
+func TestErrBatteryOptionCatalog(t *testing.T) {
+	t.Parallel()
+	for _, err := range []error{ErrBatteryOptionRequiresFleetAPI, ErrBatteryOptionNotInCatalog} {
+		if Temporary(err) || MayHaveSucceeded(err) || ShouldRetry(err) {
+			t.Fatalf("%v must not retry", err)
+		}
+		if !errors.Is(fmt.Errorf("battery: %w", err), err) {
+			t.Fatalf("callers must be able to errors.Is %v", err)
 		}
 	}
 }

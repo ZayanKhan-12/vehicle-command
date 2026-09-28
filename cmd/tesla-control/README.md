@@ -44,6 +44,14 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+Battery option codes (`$BT*`) are Tesla catalog metadata, not a vehicle
+command. `tesla-control options VIN` calls
+`GET /api/1/dx/vehicles/options`. `tesla-control battery-option VIN` prints
+the `$BT*` code when Tesla included it, or `ErrBatteryOptionNotInCatalog`
+when omitted (as in [issue #391](https://github.com/teslamotors/vehicle-command/issues/391)).
+Do not infer pack size from `$MT322`. `tesla-control -ble options` returns
+`ErrBatteryOptionRequiresFleetAPI`.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

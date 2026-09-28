@@ -310,6 +310,14 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+Battery pack identity (`$BT*` option codes) is Tesla catalog metadata
+([issue #391](https://github.com/teslamotors/vehicle-command/issues/391)),
+not a signed command. Tesla omits `bt` for many VINs; this SDK does not
+invent codes. The proxy returns HTTP 400
+(`protocol.ErrBatteryOptionRequiresFleetAPI`) for `battery_size` /
+`get_battery_option` / `get_battery_size`. Use `Account.GetVehicleOptions`
+or partner `GET /api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`, billed).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

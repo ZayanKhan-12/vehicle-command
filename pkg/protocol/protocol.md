@@ -175,6 +175,27 @@ domain controls locks, remote start, and trunk, among others; The Infotainment
 domain processes the remaining commands. VCSEC can be reached over BLE even
 when infotainment is asleep.
 
+### Battery option codes
+
+Pack identity (`$BT42`, `$BTF0`, …) is Tesla **catalog** metadata from
+[`GET /api/1/dx/vehicles/options?vin=`](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-management),
+not a signed `VehicleAction` or `ChargeState` field. `ChargeState` reports
+SOC and rated range, not pack kWh.
+
+Tesla's options response for many VINs omits any `$BT*` code (see the sample
+in [issue #391](https://github.com/teslamotors/vehicle-command/issues/391)).
+This SDK does not invent a battery code from a model option such as `$MT322`.
+`account.FindBatteryOption` / `tesla-control battery-option VIN` return
+[`protocol.ErrBatteryOptionNotInCatalog`](error.go) in that case.
+`tesla-control -ble options` returns
+[`protocol.ErrBatteryOptionRequiresFleetAPI`](error.go). Proxy paths
+`battery_size`, `get_battery_option`, and `get_battery_size` return that
+Fleet-required error as HTTP 400 before a vehicle session.
+
+Tesla's documented kWh alternative is partner-token
+`GET /api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`). That endpoint is
+billed ($0.10 per successful result) and is not called by this SDK.
+
 ### Time
 
 Each domain has its own clock and represents time using `(epoch_id,
