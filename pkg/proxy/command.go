@@ -69,6 +69,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "climate_split", "set_climate_split", "climate_sync", "set_climate_sync":
+		// In-car SYNC/split is unpublished. Independent temps are set_temps.
+		// teslamotors/vehicle-command#386.
+		return nil, protocol.ErrClimateSplitNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

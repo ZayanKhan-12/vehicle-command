@@ -32,6 +32,10 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", params, func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, 0.0) }, nil},
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
+		{"climate_split", nil, nil, protocol.ErrClimateSplitNotInProtocol},
+		{"set_climate_split", proxy.RequestParameters{"on": true}, nil, protocol.ErrClimateSplitNotInProtocol},
+		{"climate_sync", proxy.RequestParameters{"on": false}, nil, protocol.ErrClimateSplitNotInProtocol},
+		{"set_climate_sync", proxy.RequestParameters{"on": true}, nil, protocol.ErrClimateSplitNotInProtocol},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 	}
 

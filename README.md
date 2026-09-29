@@ -154,6 +154,14 @@ application that can send commands over the Internet using a REST API.
 This section describes how to set up and use the HTTP proxy, which allows
 clients to send vehicle commands using a REST API.
 
+Climate split / SYNC (linked vs independent driver and passenger HVAC)
+is unpublished
+([issue #386](https://github.com/teslamotors/vehicle-command/issues/386)).
+Independent setpoints over BLE are `set_temps`. `GetClimateState`
+returns the two temp settings, not a split boolean. The proxy returns
+HTTP 400 (`protocol.ErrClimateSplitNotInProtocol`) for `climate_split`
+/ `set_climate_split` / `climate_sync` / `set_climate_sync`.
+
 As discussed above, your HTTP proxy will need to authenticate both with Tesla
 (using OAuth tokens) and with individual vehicles (using a private key).
 

@@ -59,4 +59,10 @@ you can also send commands over the Internet:
 tesla-control lock
 ```
 
+`tesla-control climate-set-temp` already sets driver and passenger
+temps over BLE. Tesla has not published a VehicleAction for climate
+split/SYNC, and ClimateState has no split boolean
+([issue #386](https://github.com/teslamotors/vehicle-command/issues/386)).
+`tesla-control climate-split` returns `ErrClimateSplitNotInProtocol`.
+
 Run `tesla-control -h` to see a full list of supported commands.
