@@ -920,6 +920,17 @@ var commands = map[string]*Command{
 			return protocol.ErrScheduledChargingFirmware
 		},
 	},
+	"boombox": {
+		help:             "remote_boombox is not in the published protocol (no VehicleAction). honk and flash-lights are published. See teslamotors/vehicle-command#411.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		optional: []Argument{
+			{name: "SOUND", help: "Fleet API sound id (0 random, 2000 locate). Ignored; no request is sent."},
+		},
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrBoomboxNotInProtocol
+		},
+	},
 	"tonneau-open": {
 		help:             "Open Cybertruck tonneau.",
 		requiresAuth:     true,

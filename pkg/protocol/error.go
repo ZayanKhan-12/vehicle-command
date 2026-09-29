@@ -104,8 +104,16 @@ var (
 	// charge-start still works. This library does not disable cabin overheat
 	// as a workaround. See teslamotors/vehicle-command#342.
 	ErrScheduledChargingFirmware = NewError("scheduled charging/departure commands are delivered by this SDK; whether the vehicle later sleeps and fires the scheduler is firmware. Cabin overheat protection can prevent that cycle on some Intel-MCU Model S vehicles. This library does not disable cabin overheat as a workaround. See teslamotors/vehicle-command#342", false, false)
-	ErrRequiresEncryption        = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext       = errors.New("could not decrypt vehicle response without a session")
+	// ErrBoomboxNotInProtocol indicates a client asked to play the external
+	// speaker (Fleet API remote_boombox / "fart" / locate ping). Fleet API
+	// still lists the REST path, but Tesla has not published a VehicleAction
+	// for it. Honk and flash-lights are published (fields 27 and 26). Guessing
+	// an unused oneof number would collide with firmware. Unsigned REST is
+	// rejected with 403 Vehicle Command Protocol required. See
+	// teslamotors/vehicle-command#411.
+	ErrBoomboxNotInProtocol = NewError("remote_boombox is not in the published vehicle command protocol (no VehicleAction; honk and flash-lights are published). Do not invent a field number. See teslamotors/vehicle-command#411", false, false)
+	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

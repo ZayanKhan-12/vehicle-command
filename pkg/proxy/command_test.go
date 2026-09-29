@@ -31,7 +31,7 @@ func TestExtractCommandAction(t *testing.T) {
 	}{
 		{"adjust_volume", params, func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, 0.0) }, nil},
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
-		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
+		{"remote_boombox", params, nil, protocol.ErrBoomboxNotInProtocol},
 		{"wifi_on", nil, nil, protocol.ErrWiFiNotInProtocol},
 		{"wifi_off", nil, nil, protocol.ErrWiFiNotInProtocol},
 		{"set_wifi", proxy.RequestParameters{"on": true}, nil, protocol.ErrWiFiNotInProtocol},

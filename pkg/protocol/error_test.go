@@ -267,3 +267,13 @@ func TestErrScheduledChargingFirmware(t *testing.T) {
 		t.Fatal("callers must be able to errors.Is ErrScheduledChargingFirmware")
 	}
 }
+
+func TestErrBoomboxNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrBoomboxNotInProtocol) || MayHaveSucceeded(ErrBoomboxNotInProtocol) || ShouldRetry(ErrBoomboxNotInProtocol) {
+		t.Fatal("unpublished boombox must not retry")
+	}
+	if !errors.Is(fmt.Errorf("fart: %w", ErrBoomboxNotInProtocol), ErrBoomboxNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrBoomboxNotInProtocol")
+	}
+}

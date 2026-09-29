@@ -62,6 +62,15 @@ the published schedule commands. This proxy will not disable cabin
 overheat protection as a workaround for Intel-MCU Model S firmware that
 does not sleep/wake the scheduler. See teslamotors/vehicle-command#342.
 
+# Remote boombox
+
+POST remote_boombox returns HTTP 400 with
+[protocol.ErrBoomboxNotInProtocol] before opening a vehicle session.
+Fleet API still lists the path; Tesla has not published a VehicleAction
+for the external speaker. honk_horn and flash_lights are published.
+This proxy will not invent a field number or map boombox onto honk. See
+teslamotors/vehicle-command#411.
+
 # Request cancellation
 
 Per-request timeouts in forwardRequest and handleVehicleCommand are derived

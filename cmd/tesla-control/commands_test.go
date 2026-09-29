@@ -206,3 +206,17 @@ func TestChargingScheduleOverheatCommandReturnsFirmwareError(t *testing.T) {
 		t.Fatalf("charging-schedule-overheat handler = %v, want ErrScheduledChargingFirmware", err)
 	}
 }
+
+func TestBoomboxCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["boombox"]
+	if !ok {
+		t.Fatal("missing boombox")
+	}
+	if info.requiresFleetAPI {
+		t.Error("boombox help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrBoomboxNotInProtocol) {
+		t.Fatalf("boombox handler = %v, want ErrBoomboxNotInProtocol", err)
+	}
+}

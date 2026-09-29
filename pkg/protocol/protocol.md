@@ -350,6 +350,25 @@ from `tesla-control charging-schedule-overheat` and proxy paths
 `scheduled_charging_overheat` / `force_scheduled_charging` (HTTP 400
 before a session).
 
+### Remote boombox (external speaker)
+
+Fleet API documents `POST .../command/remote_boombox` with `{"sound": 0}`
+(random) or `{"sound": 2000}` (locate ping). Vehicles that require the
+Vehicle Command Protocol reject **unsigned** REST with HTTP 403.
+
+The published [`car_server.proto`](protobuf/car_server.proto) has
+`VehicleControlHonkHornAction` (field 27) and
+`VehicleControlFlashLightsAction` (field 26), but **no** boombox /
+play-sound `VehicleAction`. Independent public firmware dumps of that
+file also omit it. Filling an unused oneof number would collide with
+firmware this repository cannot update. Mapping boombox onto honk would
+change vehicle behavior (horn vs external speaker).
+
+The proxy therefore returns [`protocol.ErrBoomboxNotInProtocol`](error.go)
+for `remote_boombox` (HTTP 400 before a session) instead of a generic
+"command not implemented". `tesla-control boombox` returns the same
+error. See [issue #411](https://github.com/teslamotors/vehicle-command/issues/411).
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them

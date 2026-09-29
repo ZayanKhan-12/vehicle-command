@@ -83,6 +83,11 @@ overheat protection can prevent that on some Intel-MCU Model S vehicles
 `ErrScheduledChargingFirmware`. This tool does not disable cabin overheat
 as a workaround.
 
+Fleet API lists `remote_boombox`, but it is not in the published vehicle
+command protocol. `tesla-control boombox` returns `ErrBoomboxNotInProtocol`.
+`honk` and `flash-lights` are the published alternatives. See
+[issue #411](https://github.com/teslamotors/vehicle-command/issues/411).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:
