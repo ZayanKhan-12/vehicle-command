@@ -268,6 +268,19 @@ func TestErrScheduledChargingFirmware(t *testing.T) {
 	}
 }
 
+func TestErrHvacAutoModeNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrHvacAutoModeNotInProtocol) || MayHaveSucceeded(ErrHvacAutoModeNotInProtocol) || ShouldRetry(ErrHvacAutoModeNotInProtocol) {
+		t.Fatal("unpublished HVAC Auto vs Manual must not retry")
+	}
+	if !errors.Is(fmt.Errorf("hvac auto: %w", ErrHvacAutoModeNotInProtocol), ErrHvacAutoModeNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrHvacAutoModeNotInProtocol")
+	}
+	if !strings.Contains(ErrHvacAutoModeNotInProtocol.Error(), "#283") {
+		t.Fatal("error must cite teslamotors/vehicle-command#283")
+	}
+}
+
 func TestErrBoomboxNotInProtocol(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrBoomboxNotInProtocol) || MayHaveSucceeded(ErrBoomboxNotInProtocol) || ShouldRetry(ErrBoomboxNotInProtocol) {

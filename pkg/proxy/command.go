@@ -80,6 +80,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// In-car UX exists; Tesla has not published VehicleAction numbers. Do not
 		// invent fields or send a PSK. teslamotors/vehicle-command#419.
 		return nil, protocol.ErrWiFiNotInProtocol
+	case "hvac_auto_mode", "set_hvac_auto", "climate_manual", "hvac_manual", "auto_hvac_mode":
+		// HvacAutoAction is climate power, not Auto vs Manual HVAC.
+		// teslamotors/vehicle-command#283.
+		return nil, protocol.ErrHvacAutoModeNotInProtocol
 	case "keep_awake", "keep_alive":
 		// wake does not inhibit sleep; Tesla has not published a keep-awake
 		// VehicleAction. Do not wrap charge-port-close. teslamotors/vehicle-command#397.
@@ -114,7 +118,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.ToggleMediaPlayback(ctx) }, nil
 	// Climate Controls
 	case "auto_conditioning_start":
-		return func(v *vehicle.Vehicle) error { return v.ClimateOn(ctx) }, nil
+		override, err := params.getBool("manual_override", false)
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error { return v.SetClimatePower(ctx, true, override) }, nil
 	case "auto_conditioning_stop":
 		return func(v *vehicle.Vehicle) error { return v.ClimateOff(ctx) }, nil
 	case "charge_max_range":
@@ -201,13 +209,24 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetPreconditioningMax(ctx, on, override) }, nil
 	case "set_temps":
-		driverTemp, err := params.getNumber("driver_temp", false)
+		_, hasDriver := params["driver_temp"]
+		_, hasPassenger := params["passenger_temp"]
+		if !hasDriver && !hasPassenger {
+			return nil, missingParamError("driver_temp")
+		}
+		driverTemp, err := params.getNumber("driver_temp", hasDriver)
 		if err != nil {
 			return nil, err
 		}
-		passengerTemp, err := params.getNumber("passenger_temp", false)
+		passengerTemp, err := params.getNumber("passenger_temp", hasPassenger)
 		if err != nil {
 			return nil, err
+		}
+		if !hasDriver {
+			driverTemp = passengerTemp
+		}
+		if !hasPassenger {
+			passengerTemp = driverTemp
 		}
 		return func(v *vehicle.Vehicle) error {
 			return v.ChangeClimateTemp(ctx, float32(driverTemp), float32(passengerTemp))

@@ -90,6 +90,14 @@ review of Pedestrian Warning System restrictions
 `tesla-control boombox` returns `ErrBoomboxNotInProtocol`.
 `honk` and `flash-lights` are the published alternatives.
 
+`tesla-control climate-on` / `climate-off` send `HvacAutoAction.power_on`
+(Fleet `auto_conditioning_start` / `stop`). That is climate power, not
+the in-car Auto vs Manual HVAC toggle
+([issue #283](https://github.com/teslamotors/vehicle-command/issues/283)).
+`tesla-control hvac-auto-mode` returns `ErrHvacAutoModeNotInProtocol`.
+`climate-set-temp` sets `driver_temp_celsius` and `passenger_temp_celsius`;
+sending only `absolute_celsius` leaves those at proto3 zero (LO).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

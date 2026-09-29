@@ -116,8 +116,18 @@ var (
 	// Unsigned REST is rejected with 403 Vehicle Command Protocol required.
 	// See teslamotors/vehicle-command#266 and #411.
 	ErrBoomboxNotInProtocol = NewError("remote_boombox is not in the published vehicle command protocol (no VehicleAction; Tesla has not released it pending legal review of Pedestrian Warning System restrictions). Do not invent or copy a field number. See teslamotors/vehicle-command#266", false, false)
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrHvacAutoModeNotInProtocol indicates a client asked to switch HVAC
+	// Auto vs Manual mode (or heater-off / vent-only as in #112). HvacAutoAction
+	// is climate power on/off (Fleet auto_conditioning_start / stop). Its
+	// manual_override bit is a low-SOC override, not Auto vs Manual. Climate
+	// setpoints must use driver_temp_celsius and passenger_temp_celsius
+	// (ChangeClimateTemp / set_temps); absolute_celsius alone leaves those
+	// proto3 zeros, which firmware treats as LO. Tesla has not published a
+	// VehicleAction for Auto vs Manual HVAC. Guessing an unused oneof number
+	// would collide with firmware. See teslamotors/vehicle-command#283.
+	ErrHvacAutoModeNotInProtocol = NewError("HVAC Auto vs Manual mode is not in the published vehicle command protocol (HvacAutoAction is climate on/off; manual_override is a low-SOC override). Do not invent a field number. Set temperatures with driver_temp_celsius and passenger_temp_celsius. See teslamotors/vehicle-command#283", false, false)
+	ErrRequiresEncryption        = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext       = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

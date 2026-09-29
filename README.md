@@ -364,6 +364,16 @@ returns 403 Vehicle Command Protocol required. The proxy returns HTTP 400
 (`protocol.ErrBoomboxNotInProtocol`) and does not invent a field, copy a
 firmware dump, or map boombox onto `honk_horn`.
 
+`HvacAutoAction` is climate power
+([issue #283](https://github.com/teslamotors/vehicle-command/issues/283)),
+not Auto vs Manual HVAC. `auto_conditioning_start` / `stop` turn climate
+on and off. Tesla has not published a VehicleAction for Auto vs Manual
+mode. The proxy returns HTTP 400 (`protocol.ErrHvacAutoModeNotInProtocol`)
+for `hvac_auto_mode` / `set_hvac_auto` / `climate_manual` / `hvac_manual`
+/ `auto_hvac_mode`. `set_temps` encodes `driver_temp` and
+`passenger_temp`; `absolute_celsius` alone leaves those proto3 zeros,
+which firmware treats as LO.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

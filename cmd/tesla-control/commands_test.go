@@ -207,6 +207,20 @@ func TestChargingScheduleOverheatCommandReturnsFirmwareError(t *testing.T) {
 	}
 }
 
+func TestHvacAutoModeCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["hvac-auto-mode"]
+	if !ok {
+		t.Fatal("missing hvac-auto-mode")
+	}
+	if info.requiresFleetAPI {
+		t.Error("hvac-auto-mode help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrHvacAutoModeNotInProtocol) {
+		t.Fatalf("hvac-auto-mode handler = %v, want ErrHvacAutoModeNotInProtocol", err)
+	}
+}
+
 func TestBoomboxCommandReturnsProtocolError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["boombox"]

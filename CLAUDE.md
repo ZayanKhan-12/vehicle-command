@@ -124,6 +124,15 @@ make proto-gen   # requires protoc + protoc-gen-go
   Do not invent an unused oneof tag, copy a third-party firmware dump, or
   map boombox onto honk. Return `protocol.ErrBoomboxNotInProtocol`. See
   teslamotors/vehicle-command#266 and #411.
+* `HvacAutoAction` is climate power (`ClimateOn` / `ClimateOff`, Fleet
+  `auto_conditioning_start` / `stop`), not Auto vs Manual HVAC.
+  `manual_override` is a low-SOC override. Tesla has not published a
+  VehicleAction for Auto vs Manual (or heater-off / vent). Return
+  `protocol.ErrHvacAutoModeNotInProtocol`. Set temperatures with
+  `driver_temp_celsius` / `passenger_temp_celsius`
+  (`ChangeClimateTemp` / `set_temps`); `absolute_celsius` alone is proto3
+  0 on those fields and firmware treats that as LO. Do not send
+  `TEMP_MAX` with a numeric setpoint. See teslamotors/vehicle-command#283.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
