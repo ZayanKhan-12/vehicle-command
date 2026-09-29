@@ -100,6 +100,10 @@ make proto-gen   # requires protoc + protoc-gen-go
   context is canceled before the handler defers `Disconnect`. See
   teslamotors/vehicle-command#491. Cancellation does not recall a command
   already delivered to the vehicle.
+* Dispatcher.StartSessions launches one worker per domain and returns on the
+  first non-Canceled handshake error. Buffer the results channel to
+  `len(domains)` (after expanding the default domain list) so remaining
+  workers cannot block forever on send. See teslamotors/vehicle-command#494.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
