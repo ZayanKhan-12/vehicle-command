@@ -256,6 +256,10 @@ func (v *Vehicle) Send(ctx context.Context, domain universal.Domain, payload []b
 	}
 }
 
+// Wakeup starts the infotainment system if it is asleep. It does not inhibit
+// subsequent sleep. Fleet Telemetry can report charging while Infotainment
+// is still unreachable for signed_command
+// (teslamotors/vehicle-command#452).
 func (v *Vehicle) Wakeup(ctx context.Context) error {
 	if oapi, ok := v.conn.(connector.FleetAPIConnector); ok {
 		return oapi.Wakeup(ctx)

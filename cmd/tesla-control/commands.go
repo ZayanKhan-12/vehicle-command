@@ -595,7 +595,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"charging-set-amps": {
-		help:             "Set charge current to AMPS",
+		help:             "Set charge current to AMPS (Infotainment SetChargingAmpsAction). Tesla may return vehicle unavailable while Fleet Telemetry still shows charging; see teslamotors/vehicle-command#452.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{
@@ -618,11 +618,19 @@ var commands = map[string]*Command{
 		},
 	},
 	"charging-stop": {
-		help:             "Stop charging",
+		help:             "Stop charging (Infotainment ChargingStartStopAction). Tesla may return vehicle unavailable while Fleet Telemetry still shows charging; see teslamotors/vehicle-command#452.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.ChargeStop(ctx)
+		},
+	},
+	"charging-while-asleep": {
+		help:             "Fleet Telemetry can report charging while Infotainment is asleep. charge_stop / set_charging_amps are Infotainment actions; wake does not keep Infotainment awake. See teslamotors/vehicle-command#452.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrChargingWhileInfotainmentAsleep
 		},
 	},
 	"charging-schedule": {

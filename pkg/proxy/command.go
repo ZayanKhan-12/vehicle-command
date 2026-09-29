@@ -69,6 +69,12 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "charging_while_asleep", "charge_stop_asleep", "set_charging_amps_asleep":
+		// charge_stop / set_charging_amps are published Infotainment actions.
+		// Fleet Telemetry can look live while Tesla signed_command returns
+		// vehicle unavailable. Do not invent keep-awake.
+		// teslamotors/vehicle-command#452.
+		return nil, protocol.ErrChargingWhileInfotainmentAsleep
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
@@ -230,6 +236,9 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 	case "charge_start":
 		return func(v *vehicle.Vehicle) error { return v.ChargeStart(ctx) }, nil
 	case "charge_stop":
+		// ChargingStartStopAction stop. Tesla may return
+		// inet.ErrVehicleNotAwake while Fleet Telemetry still shows charging.
+		// teslamotors/vehicle-command#452.
 		return func(v *vehicle.Vehicle) error { return v.ChargeStop(ctx) }, nil
 	case "set_charging_amps":
 		amps, err := params.getNumber("charging_amps", true)

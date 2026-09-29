@@ -310,6 +310,16 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+`charge_stop` and `set_charging_amps` are published Infotainment commands
+([issue #452](https://github.com/teslamotors/vehicle-command/issues/452)).
+Fleet Telemetry can report charging while Tesla `signed_command` returns
+`vehicle unavailable: vehicle is offline or asleep`
+(`inet.ErrVehicleNotAwake`, HTTP 408). `wake` starts infotainment but
+does not inhibit sleep. The proxy returns HTTP 400
+(`protocol.ErrChargingWhileInfotainmentAsleep`) for
+`charging_while_asleep` / `charge_stop_asleep` /
+`set_charging_amps_asleep`. This SDK does not invent keep-awake.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.
