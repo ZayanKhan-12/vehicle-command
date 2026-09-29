@@ -207,6 +207,20 @@ func TestChargingScheduleOverheatCommandReturnsFirmwareError(t *testing.T) {
 	}
 }
 
+func TestChargingManagerChargePortCommandReturnsFirmwareError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["charging-manager-charge-port"]
+	if !ok {
+		t.Fatal("missing charging-manager-charge-port")
+	}
+	if info.requiresFleetAPI {
+		t.Error("charging-manager-charge-port help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrChargingManagerChargePortFirmware) {
+		t.Fatalf("charging-manager-charge-port handler = %v, want ErrChargingManagerChargePortFirmware", err)
+	}
+}
+
 func TestHvacAutoModeCommandReturnsProtocolError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["hvac-auto-mode"]

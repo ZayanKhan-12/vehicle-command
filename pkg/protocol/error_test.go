@@ -268,6 +268,19 @@ func TestErrScheduledChargingFirmware(t *testing.T) {
 	}
 }
 
+func TestErrChargingManagerChargePortFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrChargingManagerChargePortFirmware) || MayHaveSucceeded(ErrChargingManagerChargePortFirmware) || ShouldRetry(ErrChargingManagerChargePortFirmware) {
+		t.Fatal("firmware Charging Manager charge-port ACL must not retry")
+	}
+	if !errors.Is(fmt.Errorf("charge door: %w", ErrChargingManagerChargePortFirmware), ErrChargingManagerChargePortFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrChargingManagerChargePortFirmware")
+	}
+	if !strings.Contains(ErrChargingManagerChargePortFirmware.Error(), "#413") {
+		t.Fatal("error must cite teslamotors/vehicle-command#413")
+	}
+}
+
 func TestErrHvacAutoModeNotInProtocol(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrHvacAutoModeNotInProtocol) || MayHaveSucceeded(ErrHvacAutoModeNotInProtocol) || ShouldRetry(ErrHvacAutoModeNotInProtocol) {

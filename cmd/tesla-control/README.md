@@ -98,6 +98,14 @@ the in-car Auto vs Manual HVAC toggle
 `climate-set-temp` sets `driver_temp_celsius` and `passenger_temp_celsius`;
 sending only `absolute_celsius` leaves those at proto3 zero (LO).
 
+Enroll BLE charging gadgets as `charging_manager`, not Owner
+([issue #413](https://github.com/teslamotors/vehicle-command/issues/413)).
+`charge-port-open` still sends `ChargePortDoorOpen`; firmware may refuse
+Charging Manager keys with insufficient privileges. This tool does not
+enroll Owner as a workaround.
+`tesla-control charging-manager-charge-port` returns
+`ErrChargingManagerChargePortFirmware`.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

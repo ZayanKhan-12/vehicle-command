@@ -126,8 +126,19 @@ var (
 	// VehicleAction for Auto vs Manual HVAC. Guessing an unused oneof number
 	// would collide with firmware. See teslamotors/vehicle-command#283.
 	ErrHvacAutoModeNotInProtocol = NewError("HVAC Auto vs Manual mode is not in the published vehicle command protocol (HvacAutoAction is climate on/off; manual_override is a low-SOC override). Do not invent a field number. Set temperatures with driver_temp_celsius and passenger_temp_celsius. See teslamotors/vehicle-command#283", false, false)
-	ErrRequiresEncryption        = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext       = errors.New("could not decrypt vehicle response without a session")
+	// ErrChargingManagerChargePortFirmware indicates a client asked this SDK
+	// to grant ROLE_CHARGING_MANAGER the ability to open or close the charge
+	// port. ChargePortDoorOpen/Close are already published and delivered
+	// (OpenChargePort / tesla-control charge-port-open). Role checks are
+	// firmware. Charging Manager can charging-start/stop/set-amps over BLE;
+	// charge-port historically returns MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES
+	// (teslamotors/vehicle-command#232). Tesla has not expanded that ACL.
+	// This library does not enroll Owner, rewrite the command as a VCSEC
+	// ClosureMoveRequest.chargePort bypass, or invent extra KeyMetadata
+	// permissions. See teslamotors/vehicle-command#413.
+	ErrChargingManagerChargePortFirmware = NewError("Charging Manager can authorize charging commands; charge-port open/close is firmware-gated (MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES). This SDK still delivers ChargePortDoorOpen/Close and does not enroll Owner as a workaround. See teslamotors/vehicle-command#413", false, false)
+	ErrRequiresEncryption                = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext               = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

@@ -133,6 +133,13 @@ make proto-gen   # requires protoc + protoc-gen-go
   (`ChangeClimateTemp` / `set_temps`); `absolute_celsius` alone is proto3
   0 on those fields and firmware treats that as LO. Do not send
   `TEMP_MAX` with a numeric setpoint. See teslamotors/vehicle-command#283.
+* Charging Manager (`ROLE_CHARGING_MANAGER`) authorizes charging
+  start/stop/amps. Charge-port open/close is firmware-gated
+  (`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`). Deliver
+  `ChargePortDoorOpen`/`Close`; do not enroll Owner, invent KeyMetadata
+  permissions, or bypass via VCSEC `ClosureMoveRequest.chargePort`. Return
+  `protocol.ErrChargingManagerChargePortFirmware` for clients that ask this
+  SDK to expand that ACL. See teslamotors/vehicle-command#413.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

@@ -996,7 +996,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"charge-port-open": {
-		help:             "Open charge port",
+		help:             "Open charge port (ChargePortDoorOpen). Charging Manager keys may be refused by firmware (INSUFFICIENT_PRIVILEGES); this tool does not enroll Owner as a workaround. See teslamotors/vehicle-command#413.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
@@ -1004,11 +1004,19 @@ var commands = map[string]*Command{
 		},
 	},
 	"charge-port-close": {
-		help:             "Close charge port",
+		help:             "Close charge port (ChargePortDoorClose). Charging Manager keys may be refused by firmware; see teslamotors/vehicle-command#413.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.CloseChargePort(ctx)
+		},
+	},
+	"charging-manager-charge-port": {
+		help:             "This SDK cannot expand Charging Manager firmware ACLs to charge-port. charge-port-open still sends ChargePortDoorOpen. Do not enroll Owner for a charge-door gadget. See teslamotors/vehicle-command#413.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrChargingManagerChargePortFirmware
 		},
 	},
 	"autosecure-modelx": {

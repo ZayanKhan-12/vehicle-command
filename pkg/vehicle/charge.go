@@ -187,6 +187,13 @@ func (v *Vehicle) ChargeStandardRange(ctx context.Context) error {
 		})
 }
 
+// OpenChargePort sends ChargePortDoorOpen (Infotainment). Role checks are
+// firmware. Charging Manager keys can typically charging-start/stop/set-amps
+// over BLE but may receive MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES for
+// charge-port until Tesla expands that ACL. This method still delivers the
+// published action and does not enroll Owner or rewrite the command as a
+// VCSEC ClosureMoveRequest.chargePort bypass. See
+// teslamotors/vehicle-command#413.
 func (v *Vehicle) OpenChargePort(ctx context.Context) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
@@ -198,6 +205,7 @@ func (v *Vehicle) OpenChargePort(ctx context.Context) error {
 		})
 }
 
+// CloseChargePort sends ChargePortDoorClose. See OpenChargePort.
 func (v *Vehicle) CloseChargePort(ctx context.Context) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

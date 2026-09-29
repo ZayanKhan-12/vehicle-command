@@ -97,6 +97,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// published a flag that ignores them for Walk-Away Door Lock.
 		// teslamotors/vehicle-command#480.
 		return nil, protocol.ErrBLEKeyPresenceNotInProtocol
+	case "charging_manager_charge_port", "grant_charging_manager_charge_port", "charging_manager_port":
+		// ChargePortDoorOpen/Close are published. Charging Manager ACL is firmware.
+		// Do not enroll Owner or bypass via VCSEC closures. teslamotors/vehicle-command#413.
+		return nil, protocol.ErrChargingManagerChargePortFirmware
 	case "scheduled_charging_overheat", "force_scheduled_charging":
 		// Schedule commands are published; later sleep/wake is firmware.
 		// Do not disable cabin overheat as a workaround.
