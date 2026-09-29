@@ -212,6 +212,12 @@ func (v *Vehicle) CloseChargePort(ctx context.Context) error {
 // ScheduledDeparture tells the vehicle to charge based on an expected departure time.
 //
 // Set departAt and offPeakEndTime relative to midnight.
+//
+// This command is delivered immediately. Whether the vehicle later sleeps and
+// fires the scheduler is firmware. Cabin overheat protection can prevent that
+// cycle on some Intel-MCU Model S vehicles; this method does not disable
+// cabin overheat as a workaround. See teslamotors/vehicle-command#342 and
+// [protocol.ErrScheduledChargingFirmware].
 func (v *Vehicle) ScheduleDeparture(ctx context.Context, departAt, offPeakEndTime time.Duration, preconditioning, offpeak ChargingPolicy) error {
 	if departAt < 0 || departAt > 24*time.Hour {
 		return fmt.Errorf("invalid departure time")
@@ -270,6 +276,12 @@ func (v *Vehicle) ScheduleDeparture(ctx context.Context, departAt, offPeakEndTim
 // example, set timeAfterMidnight to 2*time.Hour.
 //
 // See the Owner's Manual for more information.
+//
+// This command is delivered immediately. Whether the vehicle later sleeps and
+// fires the scheduler is firmware. Cabin overheat protection can prevent that
+// cycle on some Intel-MCU Model S vehicles; this method does not disable
+// cabin overheat as a workaround. See teslamotors/vehicle-command#342 and
+// [protocol.ErrScheduledChargingFirmware].
 func (v *Vehicle) ScheduleCharging(ctx context.Context, enabled bool, timeAfterMidnight time.Duration) error {
 	minutesFromMidnight := int32(timeAfterMidnight / time.Minute)
 	return v.executeCarServerAction(ctx,

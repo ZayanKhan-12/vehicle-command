@@ -45,6 +45,8 @@ func TestExtractCommandAction(t *testing.T) {
 		{"get_battery_size", nil, nil, protocol.ErrBatteryOptionRequiresFleetAPI},
 		{"ble_presence_exempt", nil, nil, protocol.ErrBLEKeyPresenceNotInProtocol},
 		{"command_only_key", nil, nil, protocol.ErrBLEKeyPresenceNotInProtocol},
+		{"scheduled_charging_overheat", nil, nil, protocol.ErrScheduledChargingFirmware},
+		{"force_scheduled_charging", nil, nil, protocol.ErrScheduledChargingFirmware},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2}, nil, nil},
 		{"trigger_homelink", proxy.RequestParameters{"lat": 37.5, "lon": -122.2, "homelink_device_index": 1.0}, nil, nil},

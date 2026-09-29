@@ -257,3 +257,13 @@ func TestErrBLEKeyPresenceNotInProtocol(t *testing.T) {
 		t.Fatal("callers must be able to errors.Is ErrBLEKeyPresenceNotInProtocol")
 	}
 }
+
+func TestErrScheduledChargingFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrScheduledChargingFirmware) || MayHaveSucceeded(ErrScheduledChargingFirmware) || ShouldRetry(ErrScheduledChargingFirmware) {
+		t.Fatal("firmware scheduled-charging limitation must not retry")
+	}
+	if !errors.Is(fmt.Errorf("overheat: %w", ErrScheduledChargingFirmware), ErrScheduledChargingFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrScheduledChargingFirmware")
+	}
+}

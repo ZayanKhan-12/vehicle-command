@@ -220,6 +220,13 @@ func (v *Vehicle) SetBioweaponDefenseMode(ctx context.Context, enabled bool, man
 
 }
 
+// SetCabinOverheatProtection enables or disables cabin overheat protection.
+// fanOnly uses the fan without A/C when the vehicle supports it.
+//
+// This setting is independent of scheduled charging. On some Intel-MCU Model S
+// vehicles, leaving cabin overheat on can prevent the sleep/wake cycle the
+// scheduler needs; this method does not couple the two. See
+// teslamotors/vehicle-command#342.
 func (v *Vehicle) SetCabinOverheatProtection(ctx context.Context, enabled bool, fanOnly bool) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

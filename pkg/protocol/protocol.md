@@ -325,6 +325,31 @@ Tesla's documented kWh alternative is partner-token
 `GET /api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`). That endpoint is
 billed ($0.10 per successful result) and is not called by this SDK.
 
+### Scheduled charging and cabin overheat protection
+
+`ScheduledChargingAction` (field 41) and `ScheduledDepartureAction` (field
+42) are published. `Vehicle.ScheduleCharging` /
+`tesla-control charging-schedule` and `Vehicle.ScheduleDeparture` /
+proxy `set_scheduled_departure` deliver those commands. `charge-start`
+starts charging immediately and is a separate action.
+
+Whether the vehicle later **sleeps and fires the scheduler** is firmware,
+not a missing client field. On some Intel-MCU Model S vehicles, cabin
+overheat protection (`SetCabinOverheatProtectionAction`, field 50) can
+prevent that sleep/wake cycle, so scheduled departure or scheduled
+charging does not run at the configured time even though the command was
+accepted. Turning cabin overheat off restores the schedule on those cars.
+Newer Model Y firmware is reported to schedule correctly with cabin
+overheat on. See [issue #342](https://github.com/teslamotors/vehicle-command/issues/342).
+
+This SDK does not disable cabin overheat as a workaround (that would
+change climate settings the driver enabled) and does not invent a
+"force schedule despite overheat" VehicleAction. Callers that ask for
+that workaround get [`protocol.ErrScheduledChargingFirmware`](error.go)
+from `tesla-control charging-schedule-overheat` and proxy paths
+`scheduled_charging_overheat` / `force_scheduled_charging` (HTTP 400
+before a session).
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them

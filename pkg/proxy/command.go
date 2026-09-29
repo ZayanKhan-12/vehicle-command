@@ -86,6 +86,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// published a flag that ignores them for Walk-Away Door Lock.
 		// teslamotors/vehicle-command#480.
 		return nil, protocol.ErrBLEKeyPresenceNotInProtocol
+	case "scheduled_charging_overheat", "force_scheduled_charging":
+		// Schedule commands are published; later sleep/wake is firmware.
+		// Do not disable cabin overheat as a workaround.
+		// teslamotors/vehicle-command#342.
+		return nil, protocol.ErrScheduledChargingFirmware
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

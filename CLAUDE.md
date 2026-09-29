@@ -111,6 +111,12 @@ make proto-gen   # requires protoc + protoc-gen-go
   they are not treated as a phone key left inside. Return
   `protocol.ErrBLEKeyPresenceNotInProtocol`. See
   teslamotors/vehicle-command#480.
+* Scheduled charging and scheduled departure commands are published and
+  delivered. Whether the vehicle later sleeps and fires the scheduler is
+  firmware. Cabin overheat protection can block that cycle on some
+  Intel-MCU Model S vehicles. Do not disable cabin overheat as a library
+  workaround. Return `protocol.ErrScheduledChargingFirmware`. See
+  teslamotors/vehicle-command#342.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

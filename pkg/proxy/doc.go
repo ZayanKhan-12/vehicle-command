@@ -53,6 +53,15 @@ flag that lets an in-car BLE client authorize commands while being ignored
 for Walk-Away Door Lock. Disconnect after each command. See
 teslamotors/vehicle-command#480.
 
+# Scheduled charging / cabin overheat
+
+POST scheduled_charging_overheat or force_scheduled_charging returns HTTP
+400 with [protocol.ErrScheduledChargingFirmware] before opening a vehicle
+session. set_scheduled_charging and set_scheduled_departure still deliver
+the published schedule commands. This proxy will not disable cabin
+overheat protection as a workaround for Intel-MCU Model S firmware that
+does not sleep/wake the scheduler. See teslamotors/vehicle-command#342.
+
 # Request cancellation
 
 Per-request timeouts in forwardRequest and handleVehicleCommand are derived

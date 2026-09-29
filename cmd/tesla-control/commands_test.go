@@ -192,3 +192,17 @@ func TestBLEPresenceExemptCommandReturnsProtocolError(t *testing.T) {
 		t.Fatalf("ble-presence-exempt handler = %v, want ErrBLEKeyPresenceNotInProtocol", err)
 	}
 }
+
+func TestChargingScheduleOverheatCommandReturnsFirmwareError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["charging-schedule-overheat"]
+	if !ok {
+		t.Fatal("missing charging-schedule-overheat")
+	}
+	if info.requiresFleetAPI {
+		t.Error("charging-schedule-overheat help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrScheduledChargingFirmware) {
+		t.Fatalf("charging-schedule-overheat handler = %v, want ErrScheduledChargingFirmware", err)
+	}
+}

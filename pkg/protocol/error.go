@@ -95,8 +95,17 @@ var (
 	// supported in-car architecture is connect, command, Disconnect. See
 	// teslamotors/vehicle-command#480.
 	ErrBLEKeyPresenceNotInProtocol = NewError("an enrolled BLE client is a VCSEC whitelist key; Tesla has not published a flag to ignore it for Walk-Away Door Lock. Disconnect after commands. See teslamotors/vehicle-command#480", false, false)
-	ErrRequiresEncryption          = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext         = errors.New("could not decrypt vehicle response without a session")
+	// ErrScheduledChargingFirmware indicates a client asked this SDK to make
+	// scheduled charging or scheduled departure fire while cabin overheat
+	// protection is on. ScheduledChargingAction and ScheduledDepartureAction
+	// are already published and delivered. Whether the vehicle later sleeps
+	// and runs the scheduler is firmware. On some Intel-MCU Model S vehicles,
+	// cabin overheat protection can prevent that sleep/wake cycle. Regular
+	// charge-start still works. This library does not disable cabin overheat
+	// as a workaround. See teslamotors/vehicle-command#342.
+	ErrScheduledChargingFirmware = NewError("scheduled charging/departure commands are delivered by this SDK; whether the vehicle later sleeps and fires the scheduler is firmware. Cabin overheat protection can prevent that cycle on some Intel-MCU Model S vehicles. This library does not disable cabin overheat as a workaround. See teslamotors/vehicle-command#342", false, false)
+	ErrRequiresEncryption        = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext       = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.
