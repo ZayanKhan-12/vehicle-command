@@ -236,7 +236,7 @@ var connectionHeaders = []string{
 // forwardRequest is the fallback handler for "/api/1/*".
 // It forwards GET and POST requests to Tesla using the proxy's OAuth token.
 func (p *Proxy) forwardRequest(acct *account.Account, w http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), p.Timeout)
+	ctx, cancel := context.WithTimeout(req.Context(), p.Timeout)
 	defer cancel()
 
 	proxyReq, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), req.Body)
@@ -471,7 +471,7 @@ func (p *Proxy) handleFleetTelemetryConfig(acct *account.Account, w http.Respons
 }
 
 func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWriter, req *http.Request, command, vin string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), p.Timeout)
+	ctx, cancel := context.WithTimeout(req.Context(), p.Timeout)
 	defer cancel()
 
 	// Serialize commands sent to a specific VIN to avoid some complexities associated with sharing
@@ -488,6 +488,9 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 	}
 
 	if err := car.Connect(ctx); err != nil {
+		// Connect starts the dispatcher listener. Stop it even when Start returns
+		// ctx.Err() before this function would otherwise defer Disconnect.
+		car.Disconnect()
 		writeJSONError(w, httpStatusCode(err), err)
 		return err
 	}

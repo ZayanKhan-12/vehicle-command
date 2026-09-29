@@ -94,6 +94,12 @@ make proto-gen   # requires protoc + protoc-gen-go
   `ChargeState` has SOC/range, not pack kWh. Partner
   `/api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`) is billed. See
   teslamotors/vehicle-command#391.
+* HTTP handlers must derive per-request timeouts from `req.Context()`, not
+  `context.Background()`, so client disconnects cancel pending Fleet API and
+  vehicle lookup work. `Dispatcher.Start` must `Stop` the listener if that
+  context is canceled before the handler defers `Disconnect`. See
+  teslamotors/vehicle-command#491. Cancellation does not recall a command
+  already delivered to the vehicle.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
