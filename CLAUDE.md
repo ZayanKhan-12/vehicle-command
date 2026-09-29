@@ -148,6 +148,16 @@ make proto-gen   # requires protoc + protoc-gen-go
   is another RTT. High-rate telemetry is teslamotors/fleet-telemetry.
   Return `protocol.ErrBLEStateLatencyFirmware`. See
   teslamotors/vehicle-command#414.
+* `remote_seat_heater_request` / `remote_seat_cooler_request` already map
+  to published `HvacSeatHeaterActions` (field 36) and
+  `HvacSeatCoolerActions` (field 49). Accept Fleet/Owner JSON `heater` as
+  an alias for `seat_position` on the heater path. Tesla
+  `signed_command` HTTP 501 with JSON `Unauthorized` is Fleet API
+  partner/region/OAuth allowlist; `writeJSONError` forwards Tesla's
+  status so clients see "Not Implemented". That is not a missing handler
+  and not a reason to invent VehicleAction numbers. Return
+  `protocol.ErrSeatClimateFleetAPI` for clients that ask this SDK to
+  treat those paths as unimplemented. See teslamotors/vehicle-command#383.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

@@ -221,6 +221,36 @@ func TestBLEStateFastCommandReturnsFirmwareError(t *testing.T) {
 	}
 }
 
+func TestSeatHeaterNotImplementedCommandReturnsFleetAPIError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["seat-heater-not-implemented"]
+	if !ok {
+		t.Fatal("missing seat-heater-not-implemented")
+	}
+	if info.requiresFleetAPI {
+		t.Error("seat-heater-not-implemented help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrSeatClimateFleetAPI) {
+		t.Fatalf("seat-heater-not-implemented handler = %v, want ErrSeatClimateFleetAPI", err)
+	}
+}
+
+func TestSeatHeaterAndCoolerCommandsAreImplemented(t *testing.T) {
+	t.Parallel()
+	for _, name := range []string{"seat-heater", "seat-cooler"} {
+		info, ok := commands[name]
+		if !ok {
+			t.Fatalf("missing %s", name)
+		}
+		if !info.requiresAuth {
+			t.Errorf("%s must send a signed VehicleAction", name)
+		}
+		if len(info.args) != 2 {
+			t.Errorf("%s args = %d, want SEAT and LEVEL", name, len(info.args))
+		}
+	}
+}
+
 func TestChargingManagerChargePortCommandReturnsFirmwareError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["charging-manager-charge-port"]

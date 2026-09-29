@@ -1027,6 +1027,14 @@ var commands = map[string]*Command{
 			return protocol.ErrBLEStateLatencyFirmware
 		},
 	},
+	"seat-heater-not-implemented": {
+		help:             "remote_seat_heater_request and remote_seat_cooler_request already map to published HvacSeatHeaterActions / HvacSeatCoolerActions. Tesla signed_command HTTP 501 Unauthorized is Fleet API partner/region/OAuth allowlist, not a missing handler. See teslamotors/vehicle-command#383.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrSeatClimateFleetAPI
+		},
+	},
 	"autosecure-modelx": {
 		help:             "Close falcon-wing doors and lock vehicle. Model X only.",
 		requiresAuth:     true,
@@ -1101,6 +1109,36 @@ var commands = map[string]*Command{
 				position: level,
 			}
 			return car.SetSeatHeater(ctx, spec)
+		},
+	},
+	"seat-cooler": {
+		help:             "Set seat cooler at SEAT to LEVEL (front seats only)",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "SEAT", help: "front-left or front-right"},
+			{name: "LEVEL", help: "off, low, medium, or high"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			seats := map[string]vehicle.SeatPosition{
+				"front-left":  vehicle.SeatFrontLeft,
+				"front-right": vehicle.SeatFrontRight,
+			}
+			position, ok := seats[args["SEAT"]]
+			if !ok {
+				return fmt.Errorf("invalid seat position")
+			}
+			levels := map[string]vehicle.Level{
+				"off":    vehicle.LevelOff,
+				"low":    vehicle.LevelLow,
+				"medium": vehicle.LevelMed,
+				"high":   vehicle.LevelHigh,
+			}
+			level, ok := levels[args["LEVEL"]]
+			if !ok {
+				return fmt.Errorf("invalid seat cooler level")
+			}
+			return car.SetSeatCooler(ctx, level, position)
 		},
 	},
 	"steering-wheel-heater": {

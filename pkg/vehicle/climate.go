@@ -7,7 +7,11 @@ import (
 	carserver "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/carserver"
 )
 
-// SetSeatCooler sets seat cooling level.
+// SetSeatCooler sets seat cooling via published HvacSeatCoolerActions
+// (VehicleAction field 49). tesla-http-proxy maps remote_seat_cooler_request
+// onto this method. HTTP 501 Unauthorized from Tesla signed_command is Fleet
+// API partner/region/OAuth allowlist, not a missing handler. See
+// teslamotors/vehicle-command#383.
 func (v *Vehicle) SetSeatCooler(ctx context.Context, level Level, seat SeatPosition) error {
 	// The protobuf index starts at 0 for unknown, we want to start with 0 for off
 	seatMap := map[SeatPosition]carserver.HvacSeatCoolerActions_HvacSeatCoolerPosition_E{
@@ -172,6 +176,12 @@ func (s Level) addToHeaterAction(action *carserver.HvacSeatHeaterActions_HvacSea
 	}
 }
 
+// SetSeatHeater sets seat heating via published HvacSeatHeaterActions
+// (VehicleAction field 36). tesla-http-proxy maps remote_seat_heater_request
+// onto this method (Owner/Fleet JSON "heater" is an alias for
+// "seat_position"). HTTP 501 Unauthorized from Tesla signed_command is Fleet
+// API partner/region/OAuth allowlist, not a missing handler. See
+// teslamotors/vehicle-command#383.
 func (v *Vehicle) SetSeatHeater(ctx context.Context, levels map[SeatPosition]Level) error {
 	var actions []*carserver.HvacSeatHeaterActions_HvacSeatHeaterAction
 

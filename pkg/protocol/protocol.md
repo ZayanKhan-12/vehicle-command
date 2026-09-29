@@ -233,6 +233,36 @@ Callers that ask this library to guarantee a sub-150ms BLE poll get
 `tesla-control ble-state-fast` and proxy paths `ble_state_fast` /
 `drive_state_fast` / `set_ble_poll_interval` (HTTP 400 before a session).
 
+### Seat heater / cooler vs Tesla `signed_command` HTTP 501
+
+`remote_seat_heater_request` and `remote_seat_cooler_request` are
+**implemented**. tesla-http-proxy maps them to published
+`HvacSeatHeaterActions` (VehicleAction field 36) and
+`HvacSeatCoolerActions` (field 49). `tesla-control seat-heater` and
+`seat-cooler` send those actions over BLE or Fleet API.
+
+Owner/Fleet JSON historically used `"heater"` (0–8) plus `"level"`
+(0–3) for the heater endpoint; the proxy also accepts `"seat_position"`
+(the same 0–8 index). Cooler uses `"seat_position"` plus
+`"seat_cooler_level"` (`"level"` is an alias). Missing parameters are
+HTTP 400 **before** a vehicle session.
+
+If Tesla `POST .../signed_command` returns HTTP **501** with JSON
+`"error":"Unauthorized"`, tesla-http-proxy **already signed and
+forwarded** the command. [`writeJSONError`](../proxy/proxy.go) copies
+Tesla's status, so clients see "Not Implemented"
+(`http.StatusText(501)`). That is Tesla Fleet API partner/region/OAuth
+allowlist, not `proxy.ErrCommandNotImplemented`. Other REST commands
+succeeding does not mean these handlers are missing
+([issue #383](https://github.com/teslamotors/vehicle-command/issues/383)).
+
+This SDK does not invent unused VehicleAction numbers or skip command
+signing. Callers that ask to treat the published paths as unimplemented
+get [`protocol.ErrSeatClimateFleetAPI`](error.go) from
+`tesla-control seat-heater-not-implemented` and proxy paths
+`seat_heater_not_implemented` / `seat_cooler_not_implemented` /
+`remote_seat_climate_not_implemented` (HTTP 400 before a session).
+
 ## Protocol concepts
 
 This section provides an overview of concepts handled by the protocol.

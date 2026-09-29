@@ -197,6 +197,12 @@ func writeJSONError(w http.ResponseWriter, code int, err error) {
 
 	var httpErr *inet.HTTPError
 	var jsonBytes []byte
+	// inet.HTTPError keeps Tesla's status and body. tesla-http-proxy therefore
+	// forwards Tesla signed_command HTTP 501 as "Not Implemented" even when
+	// ExtractCommandAction already mapped the REST path (for example
+	// remote_seat_heater_request). JSON error "Unauthorized" is Tesla Fleet
+	// API partner/region/OAuth allowlist, not ErrCommandNotImplemented.
+	// See teslamotors/vehicle-command#383.
 	if errors.As(err, &httpErr) {
 		code = httpErr.Code
 		jsonBytes = []byte(err.Error())

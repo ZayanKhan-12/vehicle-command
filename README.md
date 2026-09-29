@@ -393,6 +393,16 @@ DriveState. Handshake once and reuse the session. The proxy returns HTTP
 `drive_state_fast` / `set_ble_poll_interval`. High-rate streaming is
 [fleet-telemetry](https://github.com/teslamotors/fleet-telemetry).
 
+`remote_seat_heater_request` and `remote_seat_cooler_request` already
+map to published `HvacSeatHeaterActions` / `HvacSeatCoolerActions`
+([issue #383](https://github.com/teslamotors/vehicle-command/issues/383)).
+The heater body accepts Owner/Fleet `"heater"` as an alias for
+`"seat_position"`. HTTP 501 with JSON `Unauthorized` from Tesla
+`signed_command` is Fleet API partner/region/OAuth allowlist; the proxy
+forwards Tesla's status (`Not Implemented`). The proxy returns HTTP 400
+(`protocol.ErrSeatClimateFleetAPI`) for `seat_heater_not_implemented` /
+`seat_cooler_not_implemented` / `remote_seat_climate_not_implemented`.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

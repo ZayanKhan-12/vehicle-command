@@ -281,6 +281,22 @@ func TestErrBLEStateLatencyFirmware(t *testing.T) {
 	}
 }
 
+func TestErrSeatClimateFleetAPI(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrSeatClimateFleetAPI) || MayHaveSucceeded(ErrSeatClimateFleetAPI) || ShouldRetry(ErrSeatClimateFleetAPI) {
+		t.Fatal("Tesla signed_command 501 on seat climate must not retry as a missing handler")
+	}
+	if !errors.Is(fmt.Errorf("501: %w", ErrSeatClimateFleetAPI), ErrSeatClimateFleetAPI) {
+		t.Fatal("callers must be able to errors.Is ErrSeatClimateFleetAPI")
+	}
+	if !strings.Contains(ErrSeatClimateFleetAPI.Error(), "#383") {
+		t.Fatal("error must cite teslamotors/vehicle-command#383")
+	}
+	if !strings.Contains(ErrSeatClimateFleetAPI.Error(), "are implemented") {
+		t.Fatal("error must state seat heater/cooler VehicleActions are implemented")
+	}
+}
+
 func TestErrChargingManagerChargePortFirmware(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrChargingManagerChargePortFirmware) || MayHaveSucceeded(ErrChargingManagerChargePortFirmware) || ShouldRetry(ErrChargingManagerChargePortFirmware) {

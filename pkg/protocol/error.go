@@ -148,8 +148,19 @@ var (
 	// another RTT. High-rate telemetry is teslamotors/fleet-telemetry, not
 	// this repo. See teslamotors/vehicle-command#414.
 	ErrBLEStateLatencyFirmware = NewError("BLE GetDriveState latency is a vehicle round-trip (~250-300ms observed), not a client timer. This SDK cannot guarantee <150ms, does not disable response encryption, and has no streaming DriveState action. Reuse the session; fleet-telemetry is a separate product. See teslamotors/vehicle-command#414", false, false)
-	ErrRequiresEncryption      = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext     = errors.New("could not decrypt vehicle response without a session")
+	// ErrSeatClimateFleetAPI indicates a client treated Tesla signed_command
+	// HTTP 501 Unauthorized as tesla-http-proxy missing remote_seat_heater_request
+	// / remote_seat_cooler_request. Those REST paths already map to published
+	// HvacSeatHeaterActions (field 36) and HvacSeatCoolerActions (field 49).
+	// tesla-control seat-heater / seat-cooler send them. writeJSONError copies
+	// Tesla's HTTP status, so StatusText(501) is "Not Implemented" even though
+	// ExtractCommandAction succeeded and the proxy POSTed signed_command.
+	// JSON error "Unauthorized" is Tesla Fleet API partner/region/OAuth
+	// allowlist. This library does not invent unused VehicleAction numbers or
+	// skip command signing. See teslamotors/vehicle-command#383.
+	ErrSeatClimateFleetAPI = NewError("remote_seat_heater_request and remote_seat_cooler_request are implemented (HvacSeatHeaterActions / HvacSeatCoolerActions). HTTP 501 Unauthorized from Tesla signed_command is Fleet API partner/region/OAuth allowlist, not a missing proxy handler. tesla-http-proxy forwards Tesla's status (Not Implemented). See teslamotors/vehicle-command#383", false, false)
+	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

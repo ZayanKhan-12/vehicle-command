@@ -118,3 +118,61 @@ func TestChangeClimateTempEncodesDriverAndPassenger(t *testing.T) {
 		t.Errorf("level = %v, want unset (TEMP_MIN/TEMP_MAX are LO/HI, not a numeric-temp flag)", adj.GetLevel())
 	}
 }
+
+func TestSetSeatHeaterSendsHvacSeatHeaterActions(t *testing.T) {
+	car, sender := newTestVehicle()
+	sender.Listen(nil)
+	sender.fixedResponse = &universal.RoutableMessage{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := car.SetSeatHeater(ctx, map[SeatPosition]Level{SeatFrontLeft: LevelMed}); err != nil {
+		if errors.Is(err, protocol.ErrSeatClimateFleetAPI) {
+			t.Fatal("SetSeatHeater must send published HvacSeatHeaterActions, not refuse as unimplemented")
+		}
+		t.Fatalf("SetSeatHeater: %v", err)
+	}
+	heater := climateActionFromLastMessage(t, sender).GetHvacSeatHeaterActions()
+	if heater == nil {
+		t.Fatal("request was not HvacSeatHeaterActions")
+	}
+	if len(heater.HvacSeatHeaterAction) != 1 {
+		t.Fatalf("actions = %d, want 1", len(heater.HvacSeatHeaterAction))
+	}
+	action := heater.HvacSeatHeaterAction[0]
+	if action.GetSEAT_HEATER_MED() == nil {
+		t.Error("seat heater level is not MED")
+	}
+	if action.GetCAR_SEAT_FRONT_LEFT() == nil {
+		t.Error("seat position is not FRONT_LEFT")
+	}
+}
+
+func TestSetSeatCoolerSendsHvacSeatCoolerActions(t *testing.T) {
+	car, sender := newTestVehicle()
+	sender.Listen(nil)
+	sender.fixedResponse = &universal.RoutableMessage{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := car.SetSeatCooler(ctx, LevelLow, SeatFrontRight); err != nil {
+		if errors.Is(err, protocol.ErrSeatClimateFleetAPI) {
+			t.Fatal("SetSeatCooler must send published HvacSeatCoolerActions, not refuse as unimplemented")
+		}
+		t.Fatalf("SetSeatCooler: %v", err)
+	}
+	cooler := climateActionFromLastMessage(t, sender).GetHvacSeatCoolerActions()
+	if cooler == nil {
+		t.Fatal("request was not HvacSeatCoolerActions")
+	}
+	if len(cooler.HvacSeatCoolerAction) != 1 {
+		t.Fatalf("actions = %d, want 1", len(cooler.HvacSeatCoolerAction))
+	}
+	action := cooler.HvacSeatCoolerAction[0]
+	if action.GetSeatCoolerLevel() != carserver.HvacSeatCoolerActions_HvacSeatCoolerLevel_Low {
+		t.Errorf("seat_cooler_level = %v, want Low", action.GetSeatCoolerLevel())
+	}
+	if action.GetSeatPosition() != carserver.HvacSeatCoolerActions_HvacSeatCoolerPosition_FrontRight {
+		t.Errorf("seat_position = %v, want FrontRight", action.GetSeatPosition())
+	}
+}

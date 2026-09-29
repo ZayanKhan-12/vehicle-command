@@ -63,6 +63,16 @@ func TestExtractCommandAction(t *testing.T) {
 		{"ble_state_fast", nil, nil, protocol.ErrBLEStateLatencyFirmware},
 		{"drive_state_fast", nil, nil, protocol.ErrBLEStateLatencyFirmware},
 		{"set_ble_poll_interval", proxy.RequestParameters{"interval_ms": 50.0}, nil, protocol.ErrBLEStateLatencyFirmware},
+		{"remote_seat_heater_request", proxy.RequestParameters{"seat_position": 0.0, "level": 2.0}, nil, nil},
+		{"remote_seat_heater_request", proxy.RequestParameters{"heater": 1.0, "level": 3.0}, nil, nil},
+		{"remote_seat_heater_request", proxy.RequestParameters{"level": 2.0}, nil, &protocol.NominalError{Details: fmt.Errorf("missing seat_position param")}},
+		{"remote_seat_heater_request", proxy.RequestParameters{"heater": 99.0, "level": 1.0}, nil, errors.New("invalid seat position")},
+		{"remote_seat_cooler_request", proxy.RequestParameters{"seat_position": 1.0, "seat_cooler_level": 2.0}, nil, nil},
+		{"remote_seat_cooler_request", proxy.RequestParameters{"seat_position": 1.0, "level": 2.0}, nil, nil},
+		{"remote_seat_cooler_request", proxy.RequestParameters{"seat_cooler_level": 2.0}, nil, &protocol.NominalError{Details: fmt.Errorf("missing seat_position param")}},
+		{"seat_heater_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
+		{"seat_cooler_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
+		{"remote_seat_climate_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
 		{"charge_port_door_open", nil, nil, nil},
 		{"charge_port_door_close", nil, nil, nil},
 		{"scheduled_charging_overheat", nil, nil, protocol.ErrScheduledChargingFirmware},
@@ -101,5 +111,41 @@ func TestExtractCommandAction(t *testing.T) {
 		} else if err != nil && err.Error() != test.expected.Error() {
 			t.Errorf("Unexpected error for command %s: %v", test.command, err)
 		}
+	}
+}
+
+func TestRemoteSeatHeaterIsImplemented(t *testing.T) {
+	ctx := context.Background()
+	action, err := proxy.ExtractCommandAction(ctx, "remote_seat_heater_request", proxy.RequestParameters{
+		"heater": 0.0,
+		"level":  2.0,
+	})
+	if err != nil {
+		t.Fatalf("Owner API heater alias must parse: %v", err)
+	}
+	if action == nil {
+		t.Fatal("remote_seat_heater_request must return an action, not ErrCommandNotImplemented")
+	}
+	if errors.Is(err, protocol.ErrSeatClimateFleetAPI) {
+		t.Fatal("the published heater path must send HvacSeatHeaterActions")
+	}
+
+	action, err = proxy.ExtractCommandAction(ctx, "remote_seat_cooler_request", proxy.RequestParameters{
+		"seat_position":     1.0,
+		"seat_cooler_level": 2.0,
+	})
+	if err != nil {
+		t.Fatalf("remote_seat_cooler_request must parse: %v", err)
+	}
+	if action == nil {
+		t.Fatal("remote_seat_cooler_request must return an action")
+	}
+
+	_, err = proxy.ExtractCommandAction(ctx, "remote_seat_heater_request", proxy.RequestParameters{
+		"heater": 99.0,
+		"level":  1.0,
+	})
+	if err == nil || err.Error() != "invalid seat position" {
+		t.Fatalf("invalid heater index = %v, want invalid seat position", err)
 	}
 }

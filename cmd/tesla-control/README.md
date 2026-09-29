@@ -114,6 +114,14 @@ Reuse the session; handshake plus GetState is two RTTs (~500ms).
 `tesla-control ble-state-fast` returns `ErrBLEStateLatencyFirmware`.
 This tool does not disable response encryption or stream DriveState.
 
+`seat-heater` and `seat-cooler` send published `HvacSeatHeaterActions` /
+`HvacSeatCoolerActions`
+([issue #383](https://github.com/teslamotors/vehicle-command/issues/383)).
+Tesla `signed_command` HTTP 501 Unauthorized is Fleet API
+partner/region/OAuth allowlist, not a missing command.
+`tesla-control seat-heater-not-implemented` returns
+`ErrSeatClimateFleetAPI`.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:
