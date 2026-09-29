@@ -1,11 +1,22 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
 )
+
+func TestErrBoomboxNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrBoomboxNotInProtocol) || MayHaveSucceeded(ErrBoomboxNotInProtocol) || ShouldRetry(ErrBoomboxNotInProtocol) {
+		t.Fatal("unpublished boombox must not retry")
+	}
+	if !errors.Is(fmt.Errorf("fart: %w", ErrBoomboxNotInProtocol), ErrBoomboxNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrBoomboxNotInProtocol")
+	}
+}
 
 func TestWrappedErrorClassification(t *testing.T) {
 	possiblySucceeded := NewError("command outcome unknown", true, true)

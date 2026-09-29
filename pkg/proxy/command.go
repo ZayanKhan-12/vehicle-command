@@ -16,7 +16,9 @@ import (
 )
 
 var (
-	// ErrCommandNotImplemented indicates a command has not be implemented in the SDK
+	// ErrCommandNotImplemented indicates a command has not be implemented in the SDK.
+	// remote_boombox is not this case: Tesla has not published a VehicleAction.
+	// Use protocol.ErrBoomboxNotInProtocol. See teslamotors/vehicle-command#411.
 	ErrCommandNotImplemented = errors.New("command not implemented")
 
 	// ErrCommandUseRESTAPI indicates vehicle/command is not supported by the protocol
@@ -68,7 +70,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
-		return nil, ErrCommandNotImplemented
+		// Fleet API lists this REST path; Tesla has not published a
+		// VehicleAction. Do not invent a field or map it to honk.
+		// teslamotors/vehicle-command#411.
+		return nil, protocol.ErrBoomboxNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
