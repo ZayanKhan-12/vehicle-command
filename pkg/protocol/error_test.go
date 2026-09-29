@@ -1,11 +1,22 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
 )
+
+func TestErrScheduledChargingFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrScheduledChargingFirmware) || MayHaveSucceeded(ErrScheduledChargingFirmware) || ShouldRetry(ErrScheduledChargingFirmware) {
+		t.Fatal("firmware scheduled-charging limitation must not retry")
+	}
+	if !errors.Is(fmt.Errorf("overheat: %w", ErrScheduledChargingFirmware), ErrScheduledChargingFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrScheduledChargingFirmware")
+	}
+}
 
 func TestWrappedErrorClassification(t *testing.T) {
 	possiblySucceeded := NewError("command outcome unknown", true, true)

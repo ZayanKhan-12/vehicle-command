@@ -44,6 +44,14 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+`tesla-control charging-schedule` delivers `ScheduledChargingAction`.
+Whether the car later sleeps and runs the scheduler is firmware. Cabin
+overheat protection can prevent that on some Intel-MCU Model S vehicles
+([issue #342](https://github.com/teslamotors/vehicle-command/issues/342)).
+`tesla-control charging-schedule-overheat` returns
+`ErrScheduledChargingFirmware`. This tool does not disable cabin overheat
+as a workaround.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

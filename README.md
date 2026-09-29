@@ -310,6 +310,15 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+Scheduled charging and scheduled departure commands are published
+([issue #342](https://github.com/teslamotors/vehicle-command/issues/342)).
+Whether the vehicle later sleeps and fires the scheduler is firmware.
+Cabin overheat protection can block that cycle on some Intel-MCU Model S
+vehicles. The proxy returns HTTP 400 (`protocol.ErrScheduledChargingFirmware`)
+for `scheduled_charging_overheat` / `force_scheduled_charging`. This SDK
+does not disable cabin overheat as a workaround. `set_scheduled_charging`
+still delivers the schedule command.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

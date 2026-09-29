@@ -626,7 +626,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"charging-schedule": {
-		help:             "Schedule charging to MINS minutes after midnight and enable daily scheduling",
+		help:             "Schedule charging to MINS minutes after midnight. Delivery is this SDK; later sleep/wake of the scheduler is firmware (cabin overheat can block it on some Intel-MCU Model S cars; teslamotors/vehicle-command#342).",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{
@@ -648,6 +648,14 @@ var commands = map[string]*Command{
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.ScheduleCharging(ctx, false, 0*time.Hour)
+		},
+	},
+	"charging-schedule-overheat": {
+		help:             "This SDK cannot make scheduled charging fire while cabin overheat blocks sleep on some Intel-MCU Model S vehicles. charging-schedule still delivers the command. See teslamotors/vehicle-command#342.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrScheduledChargingFirmware
 		},
 	},
 	"media-set-volume": {
