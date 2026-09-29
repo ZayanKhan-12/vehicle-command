@@ -69,6 +69,12 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "seat_heater_not_implemented", "seat_cooler_not_implemented", "remote_seat_climate_not_implemented":
+		// remote_seat_heater_request / remote_seat_cooler_request already map
+		// to published HvacSeatHeaterActions / HvacSeatCoolerActions.
+		// Tesla signed_command HTTP 501 Unauthorized is Fleet API, not a
+		// missing handler. teslamotors/vehicle-command#383.
+		return nil, protocol.ErrSeatClimateFleetAPI
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
@@ -97,6 +103,9 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetSeatCooler(ctx, level, seat) }, nil
 	case "remote_seat_heater_request":
+		// Published HvacSeatHeaterActions. Owner/Fleet JSON "heater" is an
+		// alias for "seat_position". Tesla signed_command HTTP 501 is Fleet
+		// API, not a missing handler. teslamotors/vehicle-command#383.
 		setting, err := params.settingForHeatSeatPosition()
 		if err != nil {
 			return nil, err
@@ -612,6 +621,24 @@ func (p RequestParameters) getNumber(key string, required bool) (float64, error)
 	return 0, missingParamError(key)
 }
 
+// getNumberAny returns the first present key among keys. The first key is
+// used in missing-param errors. Owner API remote_seat_heater_request uses
+// "heater"; tesla-http-proxy historically documented "seat_position".
+func (p RequestParameters) getNumberAny(required bool, keys ...string) (float64, error) {
+	for _, key := range keys {
+		if _, exists := p[key]; exists {
+			return p.getNumber(key, true)
+		}
+	}
+	if !required {
+		return 0, nil
+	}
+	if len(keys) == 0 {
+		return 0, missingParamError("number")
+	}
+	return 0, missingParamError(keys[0])
+}
+
 func (p RequestParameters) getDays(key string, required bool) (int32, error) {
 	daysStr, err := p.getString(key, required)
 	if err != nil {
@@ -657,7 +684,9 @@ func (p RequestParameters) getTimeAfterMidnight(key string) (time.Duration, erro
 }
 
 func (p RequestParameters) settingForHeatSeatPosition() (map[vehicle.SeatPosition]vehicle.Level, error) {
-	index, err := p.getNumber("seat_position", true)
+	// Fleet/Owner API documents "heater"; tesla-http-proxy uses "seat_position"
+	// (teslamotors/vehicle-command#133, #383). Prefer seat_position when both are set.
+	index, err := p.getNumberAny(true, "seat_position", "heater")
 	if err != nil {
 		return nil, err
 	}
@@ -690,7 +719,7 @@ func (p RequestParameters) settingForCoolerSeatPosition() (vehicle.Level, vehicl
 		seat = vehicle.SeatUnknown
 	}
 
-	level, err := p.getNumber("seat_cooler_level", true)
+	level, err := p.getNumberAny(true, "seat_cooler_level", "level")
 	if err != nil {
 		return 0, 0, err
 	}

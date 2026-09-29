@@ -32,6 +32,14 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", params, func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, 0.0) }, nil},
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
+		{"remote_seat_heater_request", proxy.RequestParameters{"seat_position": 0.0, "level": 2.0}, nil, nil},
+		{"remote_seat_heater_request", proxy.RequestParameters{"heater": 1.0, "level": 3.0}, nil, nil},
+		{"remote_seat_heater_request", proxy.RequestParameters{"level": 2.0}, nil, &protocol.NominalError{Details: fmt.Errorf("missing seat_position param")}},
+		{"remote_seat_cooler_request", proxy.RequestParameters{"seat_position": 1.0, "seat_cooler_level": 2.0}, nil, nil},
+		{"remote_seat_cooler_request", proxy.RequestParameters{"seat_position": 1.0, "level": 2.0}, nil, nil},
+		{"seat_heater_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
+		{"seat_cooler_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
+		{"remote_seat_climate_not_implemented", nil, nil, protocol.ErrSeatClimateFleetAPI},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 	}
 
@@ -46,5 +54,38 @@ func TestExtractCommandAction(t *testing.T) {
 		} else if err != nil && err.Error() != test.expected.Error() {
 			t.Errorf("Unexpected error for command %s: %v", test.command, err)
 		}
+	}
+}
+
+func TestRemoteSeatHeaterIsImplemented(t *testing.T) {
+	ctx := context.Background()
+	action, err := proxy.ExtractCommandAction(ctx, "remote_seat_heater_request", proxy.RequestParameters{
+		"heater": 0.0,
+		"level":  2.0,
+	})
+	if err != nil {
+		t.Fatalf("Owner API heater alias must parse: %v", err)
+	}
+	if action == nil {
+		t.Fatal("remote_seat_heater_request must return an action, not ErrCommandNotImplemented")
+	}
+
+	action, err = proxy.ExtractCommandAction(ctx, "remote_seat_cooler_request", proxy.RequestParameters{
+		"seat_position":     1.0,
+		"seat_cooler_level": 2.0,
+	})
+	if err != nil {
+		t.Fatalf("remote_seat_cooler_request must parse: %v", err)
+	}
+	if action == nil {
+		t.Fatal("remote_seat_cooler_request must return an action")
+	}
+
+	_, err = proxy.ExtractCommandAction(ctx, "remote_seat_heater_request", proxy.RequestParameters{
+		"heater": 99.0,
+		"level":  1.0,
+	})
+	if err == nil || err.Error() != "invalid seat position" {
+		t.Fatalf("invalid heater index = %v, want invalid seat position", err)
 	}
 }

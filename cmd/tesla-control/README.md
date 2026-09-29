@@ -59,4 +59,12 @@ you can also send commands over the Internet:
 tesla-control lock
 ```
 
+`seat-heater` and `seat-cooler` send published `HvacSeatHeaterActions` /
+`HvacSeatCoolerActions`
+([issue #383](https://github.com/teslamotors/vehicle-command/issues/383)).
+Tesla `signed_command` HTTP 501 Unauthorized is Fleet API
+partner/region/OAuth allowlist, not a missing command.
+`tesla-control seat-heater-not-implemented` returns
+`ErrSeatClimateFleetAPI`.
+
 Run `tesla-control -h` to see a full list of supported commands.

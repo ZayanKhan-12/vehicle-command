@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,21 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrSeatClimateFleetAPI(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrSeatClimateFleetAPI) || MayHaveSucceeded(ErrSeatClimateFleetAPI) || ShouldRetry(ErrSeatClimateFleetAPI) {
+		t.Fatal("Tesla signed_command 501 on seat climate must not retry as a missing handler")
+	}
+	if !errors.Is(fmt.Errorf("501: %w", ErrSeatClimateFleetAPI), ErrSeatClimateFleetAPI) {
+		t.Fatal("callers must be able to errors.Is ErrSeatClimateFleetAPI")
+	}
+	if !strings.Contains(ErrSeatClimateFleetAPI.Error(), "#383") {
+		t.Fatal("error must cite teslamotors/vehicle-command#383")
+	}
+	if !strings.Contains(ErrSeatClimateFleetAPI.Error(), "are implemented") {
+		t.Fatal("error must state seat heater/cooler VehicleActions are implemented")
 	}
 }

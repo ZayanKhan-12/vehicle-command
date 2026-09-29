@@ -50,8 +50,19 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrSeatClimateFleetAPI indicates a client treated Tesla signed_command
+	// HTTP 501 Unauthorized as tesla-http-proxy missing remote_seat_heater_request
+	// / remote_seat_cooler_request. Those REST paths already map to published
+	// HvacSeatHeaterActions (field 36) and HvacSeatCoolerActions (field 49).
+	// tesla-control seat-heater / seat-cooler send them. writeJSONError copies
+	// Tesla's HTTP status, so StatusText(501) is "Not Implemented" even though
+	// ExtractCommandAction succeeded and the proxy POSTed signed_command.
+	// JSON error "Unauthorized" is Tesla Fleet API partner/region/OAuth
+	// allowlist. This library does not invent unused VehicleAction numbers or
+	// skip command signing. See teslamotors/vehicle-command#383.
+	ErrSeatClimateFleetAPI = NewError("remote_seat_heater_request and remote_seat_cooler_request are implemented (HvacSeatHeaterActions / HvacSeatCoolerActions). HTTP 501 Unauthorized from Tesla signed_command is Fleet API partner/region/OAuth allowlist, not a missing proxy handler. tesla-http-proxy forwards Tesla's status (Not Implemented). See teslamotors/vehicle-command#383", false, false)
+	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

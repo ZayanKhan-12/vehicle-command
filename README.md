@@ -154,6 +154,16 @@ application that can send commands over the Internet using a REST API.
 This section describes how to set up and use the HTTP proxy, which allows
 clients to send vehicle commands using a REST API.
 
+`remote_seat_heater_request` and `remote_seat_cooler_request` already
+map to published `HvacSeatHeaterActions` / `HvacSeatCoolerActions`
+([issue #383](https://github.com/teslamotors/vehicle-command/issues/383)).
+The heater body accepts Owner/Fleet `"heater"` as an alias for
+`"seat_position"`. HTTP 501 with JSON `Unauthorized` from Tesla
+`signed_command` is Fleet API partner/region/OAuth allowlist; the proxy
+forwards Tesla's status (`Not Implemented`). The proxy returns HTTP 400
+(`protocol.ErrSeatClimateFleetAPI`) for `seat_heater_not_implemented` /
+`seat_cooler_not_implemented` / `remote_seat_climate_not_implemented`.
+
 As discussed above, your HTTP proxy will need to authenticate both with Tesla
 (using OAuth tokens) and with individual vehicles (using a private key).
 
