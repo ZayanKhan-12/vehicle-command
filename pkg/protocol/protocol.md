@@ -206,8 +206,20 @@ using [Fleet API](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-c
 A **Vehicle Monitor** can read vehicle data, such as location information, but
 cannot authorize commands that change the vehicle's state.
 
-A **Charging Manager** can read vehicle data and authorize commands that affect
-vehicle charging.
+A **Charging Manager** can read vehicle data and authorize commands that
+affect vehicle charging (`charging-start` / `stop` / `set-amps` work over
+BLE). Role enforcement is firmware, not this SDK. `ChargePortDoorOpen` /
+`ChargePortDoorClose` are published Infotainment actions and are still
+delivered (`Vehicle.OpenChargePort`). Vehicles have historically refused
+those for Charging Manager keys with
+`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`
+([issue #232](https://github.com/teslamotors/vehicle-command/issues/232)).
+Tesla has not expanded that ACL. This SDK does not enroll Owner for a
+charge-door gadget, invent extra `KeyMetadata` permissions, or rewrite the
+command as a VCSEC `ClosureMoveRequest.chargePort` bypass. Callers that
+ask for that workaround get
+[`protocol.ErrChargingManagerChargePortFirmware`](error.go). See
+[issue #413](https://github.com/teslamotors/vehicle-command/issues/413).
 
 A **Guest** key is essentially a temporary Driver key, with an automated
 lifecycle intended to facilitate vehicle rentals. See
@@ -218,6 +230,16 @@ behalf of service technicians. Service keys can remotely (un)lock vehicles in
 order to provide roadside assistance, as well as remotely delete (but not add)
 Driver, Guest, and Fleet Manager keys. Vehicles in their default state prevent
 Service keys from authorizing other commands over the Internet.
+
+### Charging Manager vs charge port
+
+Enroll BLE charging gadgets as `ROLE_CHARGING_MANAGER` (not Owner). Owner
+can unlock and remote-start; a charge-door automator should not. Charging
+Manager already authorizes charging start/stop/amps. Opening the charge
+port is a separate Infotainment action whose ACL is firmware. Until Tesla
+expands it, the vehicle returns insufficient privileges; this client still
+sends `ChargePortDoorOpen` so a future firmware grant works without an SDK
+change. See [issue #413](https://github.com/teslamotors/vehicle-command/issues/413).
 
 ### Metadata serialization
 

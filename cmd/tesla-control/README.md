@@ -44,6 +44,14 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+Enroll BLE charging gadgets as `charging_manager`, not Owner
+([issue #413](https://github.com/teslamotors/vehicle-command/issues/413)).
+`charge-port-open` still sends `ChargePortDoorOpen`; firmware may refuse
+Charging Manager keys with insufficient privileges. This tool does not
+enroll Owner as a workaround.
+`tesla-control charging-manager-charge-port` returns
+`ErrChargingManagerChargePortFirmware`.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

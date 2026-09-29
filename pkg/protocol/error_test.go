@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,18 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrChargingManagerChargePortFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrChargingManagerChargePortFirmware) || MayHaveSucceeded(ErrChargingManagerChargePortFirmware) || ShouldRetry(ErrChargingManagerChargePortFirmware) {
+		t.Fatal("firmware Charging Manager charge-port ACL must not retry")
+	}
+	if !errors.Is(fmt.Errorf("charge door: %w", ErrChargingManagerChargePortFirmware), ErrChargingManagerChargePortFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrChargingManagerChargePortFirmware")
+	}
+	if !strings.Contains(ErrChargingManagerChargePortFirmware.Error(), "#413") {
+		t.Fatal("error must cite teslamotors/vehicle-command#413")
 	}
 }

@@ -310,6 +310,16 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+Charging Manager keys authorize charging start/stop/amps
+([issue #413](https://github.com/teslamotors/vehicle-command/issues/413)).
+Charge-port open/close is firmware-gated
+(`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`). `charge_port_door_open`
+still delivers `ChargePortDoorOpen`. The proxy returns HTTP 400
+(`protocol.ErrChargingManagerChargePortFirmware`) for
+`charging_manager_charge_port` / `grant_charging_manager_charge_port` /
+`charging_manager_port`. This SDK does not enroll Owner for a charge-door
+gadget.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

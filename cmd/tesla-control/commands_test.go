@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -60,5 +63,19 @@ func TestGetDays(t *testing.T) {
 		} else if mask != test.mask {
 			t.Errorf("day string '%s' gave mask %s instead of %s", test.str, strconv.FormatInt(int64(mask), 2), strconv.FormatInt(int64(test.mask), 2))
 		}
+	}
+}
+
+func TestChargingManagerChargePortCommandReturnsFirmwareError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["charging-manager-charge-port"]
+	if !ok {
+		t.Fatal("missing charging-manager-charge-port")
+	}
+	if info.requiresFleetAPI {
+		t.Error("charging-manager-charge-port help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrChargingManagerChargePortFirmware) {
+		t.Fatalf("charging-manager-charge-port handler = %v, want ErrChargingManagerChargePortFirmware", err)
 	}
 }
