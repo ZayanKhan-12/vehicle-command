@@ -317,7 +317,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"climate-on": {
-		help:             "Turn on climate control",
+		help:             "Turn on climate control (HvacAutoAction.power_on / Fleet auto_conditioning_start). Not Auto vs Manual HVAC mode; see teslamotors/vehicle-command#283.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
@@ -325,15 +325,23 @@ var commands = map[string]*Command{
 		},
 	},
 	"climate-off": {
-		help:             "Turn off climate control",
+		help:             "Turn off climate control (HvacAutoAction.power_on=false). Not Auto vs Manual HVAC mode; see teslamotors/vehicle-command#283.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, _ map[string]string) error {
 			return car.ClimateOff(ctx)
 		},
 	},
+	"hvac-auto-mode": {
+		help:             "There is no published VehicleAction for Auto vs Manual HVAC. climate-on/off is climate power. See teslamotors/vehicle-command#283.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrHvacAutoModeNotInProtocol
+		},
+	},
 	"climate-set-temp": {
-		help:             "Set temperature (Celsius)",
+		help:             "Set driver and passenger climate setpoints (driver_temp_celsius / passenger_temp_celsius). Do not send absolute_celsius alone (proto3 0 is LO).",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{

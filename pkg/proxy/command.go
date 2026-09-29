@@ -69,6 +69,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "hvac_auto_mode", "set_hvac_auto", "climate_manual", "hvac_manual", "auto_hvac_mode":
+		// HvacAutoAction is climate power, not Auto vs Manual HVAC.
+		// teslamotors/vehicle-command#283.
+		return nil, protocol.ErrHvacAutoModeNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
@@ -85,7 +89,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.ToggleMediaPlayback(ctx) }, nil
 	// Climate Controls
 	case "auto_conditioning_start":
-		return func(v *vehicle.Vehicle) error { return v.ClimateOn(ctx) }, nil
+		override, err := params.getBool("manual_override", false)
+		if err != nil {
+			return nil, err
+		}
+		return func(v *vehicle.Vehicle) error { return v.SetClimatePower(ctx, true, override) }, nil
 	case "auto_conditioning_stop":
 		return func(v *vehicle.Vehicle) error { return v.ClimateOff(ctx) }, nil
 	case "charge_max_range":
@@ -172,13 +180,24 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetPreconditioningMax(ctx, on, override) }, nil
 	case "set_temps":
-		driverTemp, err := params.getNumber("driver_temp", false)
+		_, hasDriver := params["driver_temp"]
+		_, hasPassenger := params["passenger_temp"]
+		if !hasDriver && !hasPassenger {
+			return nil, missingParamError("driver_temp")
+		}
+		driverTemp, err := params.getNumber("driver_temp", hasDriver)
 		if err != nil {
 			return nil, err
 		}
-		passengerTemp, err := params.getNumber("passenger_temp", false)
+		passengerTemp, err := params.getNumber("passenger_temp", hasPassenger)
 		if err != nil {
 			return nil, err
+		}
+		if !hasDriver {
+			driverTemp = passengerTemp
+		}
+		if !hasPassenger {
+			passengerTemp = driverTemp
 		}
 		return func(v *vehicle.Vehicle) error {
 			return v.ChangeClimateTemp(ctx, float32(driverTemp), float32(passengerTemp))

@@ -219,6 +219,40 @@ order to provide roadside assistance, as well as remotely delete (but not add)
 Driver, Guest, and Fleet Manager keys. Vehicles in their default state prevent
 Service keys from authorizing other commands over the Internet.
 
+### HVAC Auto vs climate power
+
+`HvacAutoAction` (VehicleAction field 10) is climate **power**.
+`power_on: true` is Fleet API `auto_conditioning_start`; `power_on: false`
+is `auto_conditioning_stop`. The protobuf name is historical. It is **not**
+the in-car Auto vs Manual HVAC toggle, and `manual_override` is a low-SOC
+override (same pattern as preconditioning-max, bioweapon, and climate
+keeper), not Auto vs Manual mode.
+
+Tesla has not published a VehicleAction for Auto vs Manual HVAC, or for
+heater-off / vent-only as requested in
+[issue #112](https://github.com/teslamotors/vehicle-command/issues/112).
+Guessing an unused oneof number would collide with firmware this SDK
+cannot update. Callers that ask for that mode get
+[`protocol.ErrHvacAutoModeNotInProtocol`](error.go) from
+`tesla-control hvac-auto-mode` and proxy paths `hvac_auto_mode` /
+`set_hvac_auto` / `climate_manual` / `hvac_manual` / `auto_hvac_mode`
+(HTTP 400 before a session). See
+[issue #283](https://github.com/teslamotors/vehicle-command/issues/283).
+
+Climate setpoints use `HvacTemperatureAdjustmentAction`. Firmware applies
+`driver_temp_celsius` and `passenger_temp_celsius`. Proto3 leaves unset
+floats at 0, which the vehicle treats as LO. Sending only
+`absolute_celsius` (or a temperature zone) without those fields therefore
+drops the setpoint to LO. `level` `TEMP_MIN` / `TEMP_MAX` are LO / HI,
+not a flag that numeric temps are present. `Vehicle.ChangeClimateTemp`
+and proxy `set_temps` encode driver and passenger Celsius and omit
+`absolute_celsius` and `level`. `set_temps` requires at least one of
+`driver_temp` / `passenger_temp` and copies a single value to both
+seats; an empty body is not encoded as 0 °C.
+
+`ClimateState.is_auto_conditioning_on` / `hvac_auto_request` are
+**state**, not a command to switch Auto vs Manual.
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them

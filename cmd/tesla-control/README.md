@@ -44,6 +44,14 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+`tesla-control climate-on` / `climate-off` send `HvacAutoAction.power_on`
+(Fleet `auto_conditioning_start` / `stop`). That is climate power, not
+the in-car Auto vs Manual HVAC toggle
+([issue #283](https://github.com/teslamotors/vehicle-command/issues/283)).
+`tesla-control hvac-auto-mode` returns `ErrHvacAutoModeNotInProtocol`.
+`climate-set-temp` sets `driver_temp_celsius` and `passenger_temp_celsius`;
+sending only `absolute_celsius` leaves those at proto3 zero (LO).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

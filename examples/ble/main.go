@@ -146,11 +146,12 @@ func main() {
 	}
 	fmt.Println("Vehicle unlocked!")
 
-	fmt.Println("Turning on HVAC...")
+	// ClimateOn is HvacAutoAction.power_on (climate power), not Auto vs Manual HVAC.
+	fmt.Println("Turning on climate...")
 	if err := car.ClimateOn(ctx); err != nil {
-		logger.Printf("Failed to turn on HVAC: %s\n", err)
+		logger.Printf("Failed to turn on climate: %s\n", err)
 		return
 	}
-	fmt.Println("HVAC on!")
+	fmt.Println("Climate on!")
 	status = 0
 }

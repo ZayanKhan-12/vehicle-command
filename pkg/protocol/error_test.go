@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,18 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrHvacAutoModeNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrHvacAutoModeNotInProtocol) || MayHaveSucceeded(ErrHvacAutoModeNotInProtocol) || ShouldRetry(ErrHvacAutoModeNotInProtocol) {
+		t.Fatal("unpublished HVAC Auto vs Manual must not retry")
+	}
+	if !errors.Is(fmt.Errorf("hvac auto: %w", ErrHvacAutoModeNotInProtocol), ErrHvacAutoModeNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrHvacAutoModeNotInProtocol")
+	}
+	if !strings.Contains(ErrHvacAutoModeNotInProtocol.Error(), "#283") {
+		t.Fatal("error must cite teslamotors/vehicle-command#283")
 	}
 }

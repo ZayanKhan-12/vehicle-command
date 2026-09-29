@@ -35,30 +35,41 @@ func (v *Vehicle) SetSeatCooler(ctx context.Context, level Level, seat SeatPosit
 		})
 }
 
-func (v *Vehicle) ClimateOn(ctx context.Context) error {
+// SetClimatePower turns climate control on or off via HvacAutoAction.power_on
+// (Fleet API auto_conditioning_start / auto_conditioning_stop).
+//
+// Despite the protobuf name, this is climate power, not the in-car Auto vs
+// Manual HVAC toggle. Tesla has not published a VehicleAction for that mode.
+// Callers that ask for Auto vs Manual should use
+// protocol.ErrHvacAutoModeNotInProtocol instead of guessing a field number.
+// See teslamotors/vehicle-command#283.
+//
+// manualOverride is the published HvacAutoAction.manual_override bit: a
+// low-SOC override, the same pattern as SetPreconditioningMax,
+// SetBioweaponDefenseMode, and SetClimateKeeperMode. It is not Auto vs
+// Manual HVAC mode.
+func (v *Vehicle) SetClimatePower(ctx context.Context, on, manualOverride bool) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
 			VehicleAction: &carserver.VehicleAction{
 				VehicleActionMsg: &carserver.VehicleAction_HvacAutoAction{
 					HvacAutoAction: &carserver.HvacAutoAction{
-						PowerOn: true,
+						PowerOn:        on,
+						ManualOverride: manualOverride,
 					},
 				},
 			},
 		})
 }
 
+// ClimateOn turns climate control on. See SetClimatePower.
+func (v *Vehicle) ClimateOn(ctx context.Context) error {
+	return v.SetClimatePower(ctx, true, false)
+}
+
+// ClimateOff turns climate control off. See SetClimatePower.
 func (v *Vehicle) ClimateOff(ctx context.Context) error {
-	return v.executeCarServerAction(ctx,
-		&carserver.Action_VehicleAction{
-			VehicleAction: &carserver.VehicleAction{
-				VehicleActionMsg: &carserver.VehicleAction_HvacAutoAction{
-					HvacAutoAction: &carserver.HvacAutoAction{
-						PowerOn: false,
-					},
-				},
-			},
-		})
+	return v.SetClimatePower(ctx, false, false)
 }
 
 func (v *Vehicle) AutoSeatAndClimate(ctx context.Context, positions []SeatPosition, enabled bool) error {
@@ -85,6 +96,14 @@ func (v *Vehicle) AutoSeatAndClimate(ctx context.Context, positions []SeatPositi
 		})
 }
 
+// ChangeClimateTemp sets the driver and passenger climate setpoints in Celsius.
+//
+// Firmware applies driver_temp_celsius and passenger_temp_celsius. Proto3
+// leaves unset floats at 0, which the vehicle treats as LO. Sending only
+// absolute_celsius (or a zone) without those fields therefore drops the
+// setpoint to LO. Level TEMP_MIN / TEMP_MAX are LO / HI, not a flag that
+// "numeric temps are present"; this method does not send them. See
+// teslamotors/vehicle-command#283.
 func (v *Vehicle) ChangeClimateTemp(ctx context.Context, driverCelsius float32, passengerCelsius float32) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
@@ -93,9 +112,6 @@ func (v *Vehicle) ChangeClimateTemp(ctx context.Context, driverCelsius float32, 
 					HvacTemperatureAdjustmentAction: &carserver.HvacTemperatureAdjustmentAction{
 						DriverTempCelsius:    driverCelsius,
 						PassengerTempCelsius: passengerCelsius,
-						Level: &carserver.HvacTemperatureAdjustmentAction_Temperature{
-							Type: &carserver.HvacTemperatureAdjustmentAction_Temperature_TEMP_MAX{},
-						},
 					},
 				},
 			},
