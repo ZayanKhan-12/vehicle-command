@@ -386,6 +386,14 @@ for `hvac_auto_mode` / `set_hvac_auto` / `climate_manual` / `hvac_manual`
 `passenger_temp`; `absolute_celsius` alone leaves those proto3 zeros,
 which firmware treats as LO.
 
+Climate split / SYNC (linked vs independent driver and passenger HVAC)
+is unpublished
+([issue #386](https://github.com/teslamotors/vehicle-command/issues/386)).
+Independent setpoints over BLE are `set_temps`. `GetClimateState`
+returns the two temp settings, not a split boolean. The proxy returns
+HTTP 400 (`protocol.ErrClimateSplitNotInProtocol`) for `climate_split`
+/ `set_climate_split` / `climate_sync` / `set_climate_sync`.
+
 Charging Manager keys authorize charging start/stop/amps
 ([issue #413](https://github.com/teslamotors/vehicle-command/issues/413)).
 Charge-port open/close is firmware-gated

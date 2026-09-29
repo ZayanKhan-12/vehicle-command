@@ -363,6 +363,14 @@ var commands = map[string]*Command{
 			return protocol.ErrHvacAutoModeNotInProtocol
 		},
 	},
+	"climate-split": {
+		help:             "There is no published VehicleAction for climate split/SYNC. climate-set-temp already sets driver and passenger temps over BLE. ClimateState has the two setpoints, not a split boolean. See teslamotors/vehicle-command#386.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrClimateSplitNotInProtocol
+		},
+	},
 	"climate-set-temp": {
 		help:             "Set driver and passenger climate setpoints (driver_temp_celsius / passenger_temp_celsius). Do not send absolute_celsius alone (proto3 0 is LO).",
 		requiresAuth:     true,

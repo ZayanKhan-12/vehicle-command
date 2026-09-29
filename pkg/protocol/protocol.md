@@ -518,6 +518,22 @@ seats; an empty body is not encoded as 0 °C.
 `ClimateState.is_auto_conditioning_on` / `hvac_auto_request` are
 **state**, not a command to switch Auto vs Manual.
 
+Tesla has not published a VehicleAction for the in-car climate
+**split / SYNC** control (linked vs independent driver and passenger
+HVAC), and `ClimateState` has no `is_climate_split` / `is_sync` boolean
+([issue #386](https://github.com/teslamotors/vehicle-command/issues/386)).
+Independent setpoints over BLE are already
+`HvacTemperatureAdjustmentAction.driver_temp_celsius` /
+`passenger_temp_celsius` (`tesla-control climate-set-temp`, proxy
+`set_temps`). `GetClimateState` returns `driver_temp_setting` and
+`passenger_temp_setting`; unequal values are not the UI SYNC flag.
+Guessing an unused oneof number, or adding a ClimateState field Tesla
+has not shipped, would collide with firmware. Callers that ask for
+that toggle get [`protocol.ErrClimateSplitNotInProtocol`](error.go)
+from `tesla-control climate-split` and proxy paths `climate_split` /
+`set_climate_split` / `climate_sync` / `set_climate_sync` (HTTP 400
+before a session).
+
 ### Charging Manager vs charge port
 
 Enroll BLE charging gadgets as `ROLE_CHARGING_MANAGER` (not Owner). Owner

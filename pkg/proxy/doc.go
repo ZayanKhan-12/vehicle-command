@@ -87,6 +87,17 @@ HVAC. set_temps requires driver_temp and/or passenger_temp
 (ChangeClimateTemp); an empty body is not encoded as 0 °C (LO). See
 teslamotors/vehicle-command#283.
 
+# Climate split / SYNC
+
+POST climate_split, set_climate_split, climate_sync, or
+set_climate_sync returns HTTP 400 with
+[protocol.ErrClimateSplitNotInProtocol] before opening a vehicle
+session. Tesla has not published a VehicleAction for the in-car
+split/SYNC control. Independent driver and passenger setpoints are
+already set_temps (HvacTemperatureAdjustmentAction). GetClimateState
+returns the two temp settings, not a split boolean. See
+teslamotors/vehicle-command#386.
+
 # Charging Manager vs charge port
 
 POST charge_port_door_open / charge_port_door_close still send

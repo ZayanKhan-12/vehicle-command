@@ -108,6 +108,10 @@ func (v *Vehicle) AutoSeatAndClimate(ctx context.Context, positions []SeatPositi
 // setpoint to LO. Level TEMP_MIN / TEMP_MAX are LO / HI, not a flag that
 // "numeric temps are present"; this method does not send them. See
 // teslamotors/vehicle-command#283.
+//
+// Independent driver and passenger setpoints are this action. Tesla has not
+// published a VehicleAction to toggle the in-car climate split/SYNC control,
+// and ClimateState has no split boolean. See teslamotors/vehicle-command#386.
 func (v *Vehicle) ChangeClimateTemp(ctx context.Context, driverCelsius float32, passengerCelsius float32) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

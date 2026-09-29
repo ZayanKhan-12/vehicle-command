@@ -133,6 +133,14 @@ make proto-gen   # requires protoc + protoc-gen-go
   (`ChangeClimateTemp` / `set_temps`); `absolute_celsius` alone is proto3
   0 on those fields and firmware treats that as LO. Do not send
   `TEMP_MAX` with a numeric setpoint. See teslamotors/vehicle-command#283.
+* Climate split / SYNC (linked vs independent driver and passenger HVAC)
+  is in-car UX. Tesla has not published a VehicleAction or a
+  ClimateState split boolean. Independent setpoints are already
+  `HvacTemperatureAdjustmentAction` (`ChangeClimateTemp` / `set_temps`).
+  `GetClimateState` returns `driver_temp_setting` and
+  `passenger_temp_setting`; do not invent an `is_climate_split` field
+  or unused oneof. Return `protocol.ErrClimateSplitNotInProtocol`. See
+  teslamotors/vehicle-command#386.
 * Charging Manager (`ROLE_CHARGING_MANAGER`) authorizes charging
   start/stop/amps. Charge-port open/close is firmware-gated
   (`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`). Deliver

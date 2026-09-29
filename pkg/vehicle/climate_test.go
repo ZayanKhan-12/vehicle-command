@@ -99,6 +99,9 @@ func TestChangeClimateTempEncodesDriverAndPassenger(t *testing.T) {
 	defer cancel()
 
 	if err := car.ChangeClimateTemp(ctx, 22, 21); err != nil {
+		if errors.Is(err, protocol.ErrClimateSplitNotInProtocol) {
+			t.Fatal("ChangeClimateTemp must send published HvacTemperatureAdjustmentAction, not refuse climate split")
+		}
 		t.Fatalf("ChangeClimateTemp: %v", err)
 	}
 	adj := climateActionFromLastMessage(t, sender).GetHvacTemperatureAdjustmentAction()

@@ -293,6 +293,20 @@ func TestHvacAutoModeCommandReturnsProtocolError(t *testing.T) {
 	}
 }
 
+func TestClimateSplitCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["climate-split"]
+	if !ok {
+		t.Fatal("missing climate-split")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("climate-split help command must not require a session")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrClimateSplitNotInProtocol) {
+		t.Fatalf("climate-split handler = %v, want ErrClimateSplitNotInProtocol", err)
+	}
+}
+
 func TestBoomboxCommandReturnsProtocolError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["boombox"]

@@ -126,6 +126,18 @@ var (
 	// VehicleAction for Auto vs Manual HVAC. Guessing an unused oneof number
 	// would collide with firmware. See teslamotors/vehicle-command#283.
 	ErrHvacAutoModeNotInProtocol = NewError("HVAC Auto vs Manual mode is not in the published vehicle command protocol (HvacAutoAction is climate on/off; manual_override is a low-SOC override). Do not invent a field number. Set temperatures with driver_temp_celsius and passenger_temp_celsius. See teslamotors/vehicle-command#283", false, false)
+	// ErrClimateSplitNotInProtocol indicates a client asked to toggle the
+	// in-car climate split / SYNC control (linked vs independent driver and
+	// passenger HVAC) or to read a dedicated split boolean from ClimateState.
+	// HvacTemperatureAdjustmentAction already sets driver_temp_celsius and
+	// passenger_temp_celsius over BLE (climate-set-temp / set_temps).
+	// ClimateState has driver_temp_setting and passenger_temp_setting, not a
+	// published is_climate_split / is_sync field. Inferring split from unequal
+	// setpoints is not the UI SYNC flag. Tesla has not published a VehicleAction
+	// for that toggle. Guessing an unused oneof number, or adding a ClimateState
+	// field Tesla has not shipped, would collide with firmware. See
+	// teslamotors/vehicle-command#386.
+	ErrClimateSplitNotInProtocol = NewError("climate split/SYNC is not in the published vehicle command protocol (no VehicleAction or ClimateState split boolean). Independent setpoints are HvacTemperatureAdjustmentAction driver_temp_celsius / passenger_temp_celsius. Do not invent a field number. See teslamotors/vehicle-command#386", false, false)
 	// ErrChargingManagerChargePortFirmware indicates a client asked this SDK
 	// to grant ROLE_CHARGING_MANAGER the ability to open or close the charge
 	// port. ChargePortDoorOpen/Close are already published and delivered

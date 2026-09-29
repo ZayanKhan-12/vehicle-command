@@ -339,6 +339,19 @@ func TestErrHvacAutoModeNotInProtocol(t *testing.T) {
 	}
 }
 
+func TestErrClimateSplitNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrClimateSplitNotInProtocol) || MayHaveSucceeded(ErrClimateSplitNotInProtocol) || ShouldRetry(ErrClimateSplitNotInProtocol) {
+		t.Fatal("unpublished climate split/SYNC must not retry")
+	}
+	if !errors.Is(fmt.Errorf("sync: %w", ErrClimateSplitNotInProtocol), ErrClimateSplitNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrClimateSplitNotInProtocol")
+	}
+	if !strings.Contains(ErrClimateSplitNotInProtocol.Error(), "#386") {
+		t.Fatal("error must cite teslamotors/vehicle-command#386")
+	}
+}
+
 func TestErrBoomboxNotInProtocol(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrBoomboxNotInProtocol) || MayHaveSucceeded(ErrBoomboxNotInProtocol) || ShouldRetry(ErrBoomboxNotInProtocol) {

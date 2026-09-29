@@ -84,6 +84,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// HvacAutoAction is climate power, not Auto vs Manual HVAC.
 		// teslamotors/vehicle-command#283.
 		return nil, protocol.ErrHvacAutoModeNotInProtocol
+	case "climate_split", "set_climate_split", "climate_sync", "set_climate_sync":
+		// In-car SYNC/split is unpublished. Independent temps are set_temps.
+		// teslamotors/vehicle-command#386.
+		return nil, protocol.ErrClimateSplitNotInProtocol
 	case "keep_awake", "keep_alive":
 		// wake does not inhibit sleep; Tesla has not published a keep-awake
 		// VehicleAction. Do not wrap charge-port-close. teslamotors/vehicle-command#397.

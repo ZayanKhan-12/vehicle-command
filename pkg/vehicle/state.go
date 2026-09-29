@@ -22,6 +22,9 @@ type StateCategory int32
 
 const (
 	StateCategoryCharge StateCategory = iota
+	// StateCategoryClimate returns [carserver.ClimateState], including
+	// driver_temp_setting and passenger_temp_setting. Tesla has not published
+	// a climate split/SYNC boolean; teslamotors/vehicle-command#386.
 	StateCategoryClimate
 	// StateCategoryDrive returns [carserver.DriveState], which carries gear, speed, power, and
 	// odometer as well as the active navigation route. See the note on response size limits in

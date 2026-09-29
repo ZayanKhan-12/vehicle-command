@@ -98,6 +98,12 @@ the in-car Auto vs Manual HVAC toggle
 `climate-set-temp` sets `driver_temp_celsius` and `passenger_temp_celsius`;
 sending only `absolute_celsius` leaves those at proto3 zero (LO).
 
+`tesla-control climate-set-temp` already sets driver and passenger
+temps over BLE. Tesla has not published a VehicleAction for climate
+split/SYNC, and ClimateState has no split boolean
+([issue #386](https://github.com/teslamotors/vehicle-command/issues/386)).
+`tesla-control climate-split` returns `ErrClimateSplitNotInProtocol`.
+
 Enroll BLE charging gadgets as `charging_manager`, not Owner
 ([issue #413](https://github.com/teslamotors/vehicle-command/issues/413)).
 `charge-port-open` still sends `ChargePortDoorOpen`; firmware may refuse
