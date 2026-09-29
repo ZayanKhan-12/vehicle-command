@@ -84,9 +84,11 @@ overheat protection can prevent that on some Intel-MCU Model S vehicles
 as a workaround.
 
 Fleet API lists `remote_boombox`, but it is not in the published vehicle
-command protocol. `tesla-control boombox` returns `ErrBoomboxNotInProtocol`.
-`honk` and `flash-lights` are the published alternatives. See
-[issue #411](https://github.com/teslamotors/vehicle-command/issues/411).
+command protocol. Tesla has not released a VehicleAction pending legal
+review of Pedestrian Warning System restrictions
+([issue #266](https://github.com/teslamotors/vehicle-command/issues/266)).
+`tesla-control boombox` returns `ErrBoomboxNotInProtocol`.
+`honk` and `flash-lights` are the published alternatives.
 
 ## Sending commands
 

@@ -355,11 +355,14 @@ does not disable cabin overheat as a workaround. `set_scheduled_charging`
 still delivers the schedule command.
 
 Fleet API lists `remote_boombox`
-([issue #411](https://github.com/teslamotors/vehicle-command/issues/411)),
+([issue #266](https://github.com/teslamotors/vehicle-command/issues/266),
+[issue #411](https://github.com/teslamotors/vehicle-command/issues/411)),
 but Tesla has not published a VehicleAction for the external speaker.
-Unsigned REST returns 403 Vehicle Command Protocol required. The proxy
-returns HTTP 400 (`protocol.ErrBoomboxNotInProtocol`) and does not invent
-a field or map boombox onto `honk_horn`.
+A collaborator stated legal review of Pedestrian Warning System
+restrictions is required before this SDK can ship it. Unsigned REST
+returns 403 Vehicle Command Protocol required. The proxy returns HTTP 400
+(`protocol.ErrBoomboxNotInProtocol`) and does not invent a field, copy a
+firmware dump, or map boombox onto `honk_horn`.
 
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN

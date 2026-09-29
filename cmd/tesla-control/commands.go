@@ -921,7 +921,7 @@ var commands = map[string]*Command{
 		},
 	},
 	"boombox": {
-		help:             "remote_boombox is not in the published protocol (no VehicleAction). honk and flash-lights are published. See teslamotors/vehicle-command#411.",
+		help:             "remote_boombox is not in the published protocol. Tesla has not released a VehicleAction pending legal review of Pedestrian Warning System restrictions. See teslamotors/vehicle-command#266.",
 		requiresAuth:     false,
 		requiresFleetAPI: false,
 		optional: []Argument{

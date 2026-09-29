@@ -276,4 +276,7 @@ func TestErrBoomboxNotInProtocol(t *testing.T) {
 	if !errors.Is(fmt.Errorf("fart: %w", ErrBoomboxNotInProtocol), ErrBoomboxNotInProtocol) {
 		t.Fatal("callers must be able to errors.Is ErrBoomboxNotInProtocol")
 	}
+	if !strings.Contains(ErrBoomboxNotInProtocol.Error(), "#266") {
+		t.Fatal("error must cite teslamotors/vehicle-command#266 legal hold")
+	}
 }

@@ -118,10 +118,12 @@ make proto-gen   # requires protoc + protoc-gen-go
   workaround. Return `protocol.ErrScheduledChargingFirmware`. See
   teslamotors/vehicle-command#342.
 * Fleet API lists `remote_boombox`, but Tesla has not published a
-  VehicleAction for the external speaker. Honk and flash-lights are
-  published. Do not invent an unused oneof tag or map boombox onto honk.
-  Return `protocol.ErrBoomboxNotInProtocol`. See
-  teslamotors/vehicle-command#411.
+  VehicleAction for the external speaker. A collaborator stated legal
+  review of Pedestrian Warning System restrictions is required
+  (teslamotors/vehicle-command#266). Honk and flash-lights are published.
+  Do not invent an unused oneof tag, copy a third-party firmware dump, or
+  map boombox onto honk. Return `protocol.ErrBoomboxNotInProtocol`. See
+  teslamotors/vehicle-command#266 and #411.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
