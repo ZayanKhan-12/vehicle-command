@@ -101,6 +101,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// ChargePortDoorOpen/Close are published. Charging Manager ACL is firmware.
 		// Do not enroll Owner or bypass via VCSEC closures. teslamotors/vehicle-command#413.
 		return nil, protocol.ErrChargingManagerChargePortFirmware
+	case "ble_state_fast", "drive_state_fast", "set_ble_poll_interval":
+		// GetState latency is the vehicle BLE round-trip. Do not disable
+		// encryption or invent a streaming DriveState. teslamotors/vehicle-command#414.
+		return nil, protocol.ErrBLEStateLatencyFirmware
 	case "scheduled_charging_overheat", "force_scheduled_charging":
 		// Schedule commands are published; later sleep/wake is firmware.
 		// Do not disable cabin overheat as a workaround.

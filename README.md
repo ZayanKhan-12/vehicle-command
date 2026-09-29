@@ -384,6 +384,15 @@ still delivers `ChargePortDoorOpen`. The proxy returns HTTP 400
 `charging_manager_port`. This SDK does not enroll Owner for a charge-door
 gadget.
 
+BLE `GetState` / `GetDriveState` (gear, speed) is one Infotainment
+round-trip, typically ~250–300ms
+([issue #414](https://github.com/teslamotors/vehicle-command/issues/414)).
+This SDK cannot guarantee <150ms, disable response encryption, or stream
+DriveState. Handshake once and reuse the session. The proxy returns HTTP
+400 (`protocol.ErrBLEStateLatencyFirmware`) for `ble_state_fast` /
+`drive_state_fast` / `set_ble_poll_interval`. High-rate streaming is
+[fleet-telemetry](https://github.com/teslamotors/fleet-telemetry).
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

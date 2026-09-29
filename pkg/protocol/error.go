@@ -137,8 +137,19 @@ var (
 	// ClosureMoveRequest.chargePort bypass, or invent extra KeyMetadata
 	// permissions. See teslamotors/vehicle-command#413.
 	ErrChargingManagerChargePortFirmware = NewError("Charging Manager can authorize charging commands; charge-port open/close is firmware-gated (MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES). This SDK still delivers ChargePortDoorOpen/Close and does not enroll Owner as a workaround. See teslamotors/vehicle-command#413", false, false)
-	ErrRequiresEncryption                = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext               = errors.New("could not decrypt vehicle response without a session")
+	// ErrBLEStateLatencyFirmware indicates a client asked this SDK to guarantee
+	// GetDriveState / GetVehicleData over BLE faster than the vehicle round-trip
+	// (reported ~250–300ms; targets of <150ms or 50–100ms). Construction and
+	// encryption are a few milliseconds; the rest is Infotainment processing
+	// plus BLE. There is no published streaming DriveState VehicleAction.
+	// Disabling FLAG_ENCRYPT_RESPONSE, shortening UUIDs, or skipping the
+	// handshake does not raise a firmware poll-rate cap and is unsafe.
+	// Handshake once and reuse the session; each extra GetState category is
+	// another RTT. High-rate telemetry is teslamotors/fleet-telemetry, not
+	// this repo. See teslamotors/vehicle-command#414.
+	ErrBLEStateLatencyFirmware = NewError("BLE GetDriveState latency is a vehicle round-trip (~250-300ms observed), not a client timer. This SDK cannot guarantee <150ms, does not disable response encryption, and has no streaming DriveState action. Reuse the session; fleet-telemetry is a separate product. See teslamotors/vehicle-command#414", false, false)
+	ErrRequiresEncryption      = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext     = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

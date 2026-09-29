@@ -268,6 +268,19 @@ func TestErrScheduledChargingFirmware(t *testing.T) {
 	}
 }
 
+func TestErrBLEStateLatencyFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrBLEStateLatencyFirmware) || MayHaveSucceeded(ErrBLEStateLatencyFirmware) || ShouldRetry(ErrBLEStateLatencyFirmware) {
+		t.Fatal("firmware BLE GetDriveState latency floor must not retry")
+	}
+	if !errors.Is(fmt.Errorf("poll: %w", ErrBLEStateLatencyFirmware), ErrBLEStateLatencyFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrBLEStateLatencyFirmware")
+	}
+	if !strings.Contains(ErrBLEStateLatencyFirmware.Error(), "#414") {
+		t.Fatal("error must cite teslamotors/vehicle-command#414")
+	}
+}
+
 func TestErrChargingManagerChargePortFirmware(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrChargingManagerChargePortFirmware) || MayHaveSucceeded(ErrChargingManagerChargePortFirmware) || ShouldRetry(ErrChargingManagerChargePortFirmware) {

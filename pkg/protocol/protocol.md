@@ -197,6 +197,42 @@ controllers must do the same after each button press. The library returns
 / `command_only_key` rather than guessing a whitelist flag. See
 [issue #480](https://github.com/teslamotors/vehicle-command/issues/480).
 
+### BLE GetDriveState / GetVehicleData latency
+
+`GetState` (for example `StateCategoryDrive`: gear, speed) is a signed
+Infotainment request/response. Callers looping over BLE have measured
+**~250–300ms** of radio plus vehicle time, with client construction and
+encryption only a few milliseconds
+([issue #414](https://github.com/teslamotors/vehicle-command/issues/414)).
+Targets of under 150ms (or 50–100ms) are below that vehicle round-trip.
+This SDK has no timer that pads the poll to 250ms, and it cannot shorten
+Infotainment processing.
+
+There is **no** published streaming or subscription `VehicleAction` for
+DriveState. `GetVehicleData` markers have no field mask that would make
+the vehicle answer faster. Disabling `FLAG_ENCRYPT_RESPONSE`, shortening
+UUIDs, or skipping the session handshake does not raise a firmware poll
+cap and is unsafe (response-size workarounds are also forbidden; see
+[Response size limits](#response-size-limits)).
+
+Practical client advice:
+
+1. `StartSession` once on Infotainment and **reuse** the session for each
+   poll. Handshake plus GetState is two round-trips (~500ms), which matches
+   reports of "250ms × 2".
+2. Request **one** `StateCategory` per poll (`tesla-control state drive`).
+   Extra categories are extra RTTs.
+3. Gear and speed are Infotainment `DriveState`, not VCSEC
+   `BodyControllerState` (that path works while infotainment sleeps but
+   does not carry speed).
+4. High-rate telemetry is [fleet-telemetry](https://github.com/teslamotors/fleet-telemetry),
+   not this repository.
+
+Callers that ask this library to guarantee a sub-150ms BLE poll get
+[`protocol.ErrBLEStateLatencyFirmware`](error.go) from
+`tesla-control ble-state-fast` and proxy paths `ble_state_fast` /
+`drive_state_fast` / `set_ble_poll_interval` (HTTP 400 before a session).
+
 ## Protocol concepts
 
 This section provides an overview of concepts handled by the protocol.

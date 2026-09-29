@@ -207,6 +207,20 @@ func TestChargingScheduleOverheatCommandReturnsFirmwareError(t *testing.T) {
 	}
 }
 
+func TestBLEStateFastCommandReturnsFirmwareError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["ble-state-fast"]
+	if !ok {
+		t.Fatal("missing ble-state-fast")
+	}
+	if info.requiresFleetAPI {
+		t.Error("ble-state-fast help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrBLEStateLatencyFirmware) {
+		t.Fatalf("ble-state-fast handler = %v, want ErrBLEStateLatencyFirmware", err)
+	}
+}
+
 func TestChargingManagerChargePortCommandReturnsFirmwareError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["charging-manager-charge-port"]

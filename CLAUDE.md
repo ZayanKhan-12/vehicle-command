@@ -140,6 +140,14 @@ make proto-gen   # requires protoc + protoc-gen-go
   permissions, or bypass via VCSEC `ClosureMoveRequest.chargePort`. Return
   `protocol.ErrChargingManagerChargePortFirmware` for clients that ask this
   SDK to expand that ACL. See teslamotors/vehicle-command#413.
+* BLE `GetState` / `GetDriveState` latency is the vehicle round-trip
+  (~250–300ms observed). Construction and encryption are a few
+  milliseconds. There is no published streaming DriveState action. Do not
+  disable `FLAG_ENCRYPT_RESPONSE`, shorten UUIDs, or skip the handshake to
+  chase <150ms. Handshake once and reuse the session; each extra category
+  is another RTT. High-rate telemetry is teslamotors/fleet-telemetry.
+  Return `protocol.ErrBLEStateLatencyFirmware`. See
+  teslamotors/vehicle-command#414.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.
