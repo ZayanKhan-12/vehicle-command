@@ -342,6 +342,16 @@ There is no published keep-awake command
 the glovebox dashcam USB. The proxy returns HTTP 400
 (`protocol.ErrKeepAwakeNotInProtocol`) for `keep_awake` / `keep_alive`.
 
+`charge_stop` and `set_charging_amps` are published Infotainment commands
+([issue #452](https://github.com/teslamotors/vehicle-command/issues/452)).
+Fleet Telemetry can report charging while Tesla `signed_command` returns
+`vehicle unavailable: vehicle is offline or asleep`
+(`inet.ErrVehicleNotAwake`, HTTP 408). `wake` starts infotainment but
+does not inhibit sleep. The proxy returns HTTP 400
+(`protocol.ErrChargingWhileInfotainmentAsleep`) for
+`charging_while_asleep` / `charge_stop_asleep` /
+`set_charging_amps_asleep`. This SDK does not invent keep-awake.
+
 Battery pack identity (`$BT*` option codes) is Tesla catalog metadata
 ([issue #391](https://github.com/teslamotors/vehicle-command/issues/391)),
 not a signed command. Tesla omits `bt` for many VINs; this SDK does not

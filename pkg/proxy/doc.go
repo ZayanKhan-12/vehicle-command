@@ -35,6 +35,18 @@ keep_accessory_power_mode powers the 12V jack and charging USB ports, not
 the glovebox dashcam/data USB. Tesla has not published a keep-alive
 VehicleAction. See teslamotors/vehicle-command#397.
 
+# Charging while Infotainment is asleep
+
+POST charge_stop and set_charging_amps still send the published
+Infotainment VehicleActions. Fleet Telemetry can report ACChargingPower
+and Soc while Tesla signed_command returns vehicle unavailable (offline
+or asleep); inet.ErrVehicleNotAwake maps to HTTP 408. wake starts
+infotainment but does not inhibit sleep. POST charging_while_asleep,
+charge_stop_asleep, or set_charging_amps_asleep returns HTTP 400 with
+[protocol.ErrChargingWhileInfotainmentAsleep] before opening a vehicle
+session. This proxy will not invent keep-awake or a charging-controller
+bypass. See teslamotors/vehicle-command#452.
+
 # Battery option codes
 
 POST battery_size, get_battery_option, or get_battery_size returns HTTP 400

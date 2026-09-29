@@ -92,6 +92,12 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// wake does not inhibit sleep; Tesla has not published a keep-awake
 		// VehicleAction. Do not wrap charge-port-close. teslamotors/vehicle-command#397.
 		return nil, protocol.ErrKeepAwakeNotInProtocol
+	case "charging_while_asleep", "charge_stop_asleep", "set_charging_amps_asleep":
+		// charge_stop / set_charging_amps are published Infotainment actions.
+		// Fleet Telemetry can look live while Tesla signed_command returns
+		// vehicle unavailable. Do not invent keep-awake.
+		// teslamotors/vehicle-command#452.
+		return nil, protocol.ErrChargingWhileInfotainmentAsleep
 	case "battery_size", "get_battery_option", "get_battery_size":
 		// Pack identity is Fleet DX catalog metadata, not a signed command.
 		// teslamotors/vehicle-command#391.
@@ -318,6 +324,9 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 	case "charge_start":
 		return func(v *vehicle.Vehicle) error { return v.ChargeStart(ctx) }, nil
 	case "charge_stop":
+		// ChargingStartStopAction stop. Tesla may return
+		// inet.ErrVehicleNotAwake while Fleet Telemetry still shows charging.
+		// teslamotors/vehicle-command#452.
 		return func(v *vehicle.Vehicle) error { return v.ChargeStop(ctx) }, nil
 	case "set_charging_amps":
 		amps, err := params.getNumber("charging_amps", true)

@@ -181,8 +181,22 @@ var (
 	// fleet-api audience does not provision it. Use Tesla developer dashboard
 	// Support Inquiry. See teslamotors/vehicle-command#460.
 	ErrPartnerOAuthNotProvisioned = NewError("Tesla Fleet Auth invalid_audience and /authorize \"No policy rules\" mean Tesla has not bound OAuth policy/audience to the application. This SDK stores tokens (tesla-auth-token) and does not mint partner tokens or register partner_accounts. Use Tesla developer dashboard Support Inquiry. See teslamotors/vehicle-command#460", false, false)
-	ErrRequiresEncryption         = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext        = errors.New("could not decrypt vehicle response without a session")
+	// ErrChargingWhileInfotainmentAsleep indicates a client asked this SDK to
+	// treat Fleet Telemetry (ACChargingPower, Soc) as proof Infotainment will
+	// accept signed_command, or to invent keep-awake / a charging-controller
+	// bypass so charge_stop and set_charging_amps work while Tesla returns
+	// "vehicle unavailable: vehicle is offline or asleep". Those REST paths
+	// already map to published Infotainment VehicleActions
+	// (ChargingStartStopAction stop, SetChargingAmpsAction). Charging hardware
+	// can run while Infotainment is asleep, so telemetry can look live while
+	// Tesla Fleet API HTTP 408/503 maps to inet.ErrVehicleNotAwake. wake starts
+	// Infotainment but does not inhibit later sleep (#397) and does not
+	// guarantee Tesla's command gateway is ready. Paid Fleet API usage is not
+	// a quota on this path. BLE still delivers these actions to Infotainment;
+	// it is not a VCSEC charging-amps command. See teslamotors/vehicle-command#452.
+	ErrChargingWhileInfotainmentAsleep = NewError("Fleet Telemetry can report charging while Infotainment is asleep. charge_stop and set_charging_amps are Infotainment VehicleActions; Tesla signed_command returns vehicle unavailable (offline or asleep) when Infotainment is unreachable. wake does not inhibit sleep. This SDK does not invent keep-awake or a charging-controller bypass. See teslamotors/vehicle-command#452", false, false)
+	ErrRequiresEncryption              = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext             = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

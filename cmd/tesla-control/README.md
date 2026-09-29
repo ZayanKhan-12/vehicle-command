@@ -60,6 +60,15 @@ setting and does not power the glovebox dashcam USB.
 `tesla-control keep-awake` returns `ErrKeepAwakeNotInProtocol`. See
 [issue #397](https://github.com/teslamotors/vehicle-command/issues/397).
 
+`charging-stop` and `charging-set-amps` send published Infotainment
+VehicleActions. Fleet Telemetry can still report `ACChargingPower` / `Soc`
+while Infotainment is asleep; Tesla `signed_command` then returns
+`vehicle unavailable: vehicle is offline or asleep`. `wake` starts
+infotainment but does not keep it awake
+([issue #452](https://github.com/teslamotors/vehicle-command/issues/452)).
+`tesla-control charging-while-asleep` returns
+`ErrChargingWhileInfotainmentAsleep`.
+
 Battery option codes (`$BT*`) are Tesla catalog metadata, not a vehicle
 command. `tesla-control options VIN` calls
 `GET /api/1/dx/vehicles/options`. `tesla-control battery-option VIN` prints

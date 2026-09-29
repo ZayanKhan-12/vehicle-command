@@ -409,6 +409,35 @@ Wrapping an Infotainment mutation (for example `charge-port-close`) as a
 library keep-alive is not supported: it changes vehicle state and fights
 designed sleep. See [issue #397](https://github.com/teslamotors/vehicle-command/issues/397).
 
+### Charging commands while Infotainment is asleep
+
+`charge_stop` / `Vehicle.ChargeStop` and `set_charging_amps` /
+`Vehicle.SetChargingAmps` are published Infotainment `VehicleAction`s
+(`ChargingStartStopAction` stop, `SetChargingAmpsAction`). tesla-http-proxy
+already maps those Fleet REST paths. Paid Fleet API usage is not a quota on
+this path.
+
+[Fleet Telemetry](https://github.com/teslamotors/fleet-telemetry)
+(`ACChargingPower`, `Soc`) is a separate product. Charging hardware can
+continue while Infotainment is asleep, so telemetry can look live while
+Tesla's `signed_command` gateway returns HTTP 408 or 503
+`vehicle unavailable: vehicle is offline or asleep`
+([`inet.ErrVehicleNotAwake`](../connector/inet/inet.go)). `wake` starts
+Infotainment but does not inhibit later sleep (see above) and does not
+guarantee Tesla's command relay is ready for the next signed command.
+
+There is no published `VehicleAction` that talks to the charging controller
+while Infotainment is unreachable. BLE still delivers these actions to
+Infotainment after handshake; it is not a VCSEC charging-amps command.
+Inventing keep-awake or wrapping `charge-port-close` as a library workaround
+is not supported.
+
+Callers that ask this SDK to treat telemetry as proof `signed_command` will
+succeed get [`protocol.ErrChargingWhileInfotainmentAsleep`](error.go) from
+`tesla-control charging-while-asleep` and proxy paths `charging_while_asleep`,
+`charge_stop_asleep`, and `set_charging_amps_asleep` (HTTP 400 before a
+session). See [issue #452](https://github.com/teslamotors/vehicle-command/issues/452).
+
 ### Battery option codes
 
 Pack identity (`$BT42`, `$BTF0`, …) is Tesla **catalog** metadata from

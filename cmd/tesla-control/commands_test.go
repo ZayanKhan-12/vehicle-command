@@ -179,6 +179,20 @@ func TestKeepAwakeCommandReturnsProtocolError(t *testing.T) {
 	}
 }
 
+func TestChargingWhileAsleepCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["charging-while-asleep"]
+	if !ok {
+		t.Fatal("missing charging-while-asleep")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("charging-while-asleep help command must not require a session")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrChargingWhileInfotainmentAsleep) {
+		t.Fatalf("charging-while-asleep handler = %v, want ErrChargingWhileInfotainmentAsleep", err)
+	}
+}
+
 func TestBLEPresenceExemptCommandReturnsProtocolError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["ble-presence-exempt"]

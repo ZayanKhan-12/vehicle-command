@@ -87,6 +87,15 @@ make proto-gen   # requires protoc + protoc-gen-go
   glovebox dashcam USB. Do not invent a keep-alive oneof or wrap
   `charge-port-close` as keep-awake. Return
   `protocol.ErrKeepAwakeNotInProtocol`. See teslamotors/vehicle-command#397.
+* `charge_stop` and `set_charging_amps` are published Infotainment
+  VehicleActions. Fleet Telemetry (`ACChargingPower`, `Soc`) can look live
+  while Tesla `signed_command` returns `vehicle unavailable: vehicle is
+  offline or asleep` (`inet.ErrVehicleNotAwake`) because charging hardware
+  can run with Infotainment asleep. `wake` does not inhibit later sleep.
+  Do not invent keep-awake, a charging-controller bypass, or treat
+  telemetry as proof Infotainment will accept the command. Return
+  `protocol.ErrChargingWhileInfotainmentAsleep` for clients that ask this
+  SDK to do that. See teslamotors/vehicle-command#452.
 * Battery pack identity (`$BT*` option codes) is Tesla catalog metadata
   (`GET /api/1/dx/vehicles/options`), not a signed vehicle field. Tesla
   omits `bt` for many VINs. Do not invent `$BT*` codes from model codes.

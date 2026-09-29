@@ -352,6 +352,19 @@ func TestErrClimateSplitNotInProtocol(t *testing.T) {
 	}
 }
 
+func TestErrChargingWhileInfotainmentAsleep(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrChargingWhileInfotainmentAsleep) || MayHaveSucceeded(ErrChargingWhileInfotainmentAsleep) || ShouldRetry(ErrChargingWhileInfotainmentAsleep) {
+		t.Fatal("telemetry-vs-Infotainment charging must not retry in Vehicle.Send")
+	}
+	if !errors.Is(fmt.Errorf("charge stop: %w", ErrChargingWhileInfotainmentAsleep), ErrChargingWhileInfotainmentAsleep) {
+		t.Fatal("callers must be able to errors.Is ErrChargingWhileInfotainmentAsleep")
+	}
+	if !strings.Contains(ErrChargingWhileInfotainmentAsleep.Error(), "#452") {
+		t.Fatal("error must cite teslamotors/vehicle-command#452")
+	}
+}
+
 func TestErrBoomboxNotInProtocol(t *testing.T) {
 	t.Parallel()
 	if Temporary(ErrBoomboxNotInProtocol) || MayHaveSucceeded(ErrBoomboxNotInProtocol) || ShouldRetry(ErrBoomboxNotInProtocol) {

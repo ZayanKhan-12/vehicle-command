@@ -128,6 +128,11 @@ func (v *Vehicle) ChargeStart(ctx context.Context) error {
 		})
 }
 
+// ChargeStop sends ChargingStartStopAction stop (Infotainment). Tesla
+// Fleet API may return inet.ErrVehicleNotAwake while Fleet Telemetry
+// still shows charging. wake starts Infotainment but does not keep it
+// awake. This method does not invent keep-awake or a charging-controller
+// bypass. See teslamotors/vehicle-command#452.
 func (v *Vehicle) ChargeStop(ctx context.Context) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
@@ -158,6 +163,11 @@ func (v *Vehicle) ChargeMaxRange(ctx context.Context) error {
 		})
 }
 
+// SetChargingAmps sends SetChargingAmpsAction (Infotainment). Tesla
+// Fleet API may return inet.ErrVehicleNotAwake while Fleet Telemetry
+// still shows charging. wake starts Infotainment but does not keep it
+// awake. This method does not invent keep-awake or a charging-controller
+// bypass. See teslamotors/vehicle-command#452.
 func (v *Vehicle) SetChargingAmps(ctx context.Context, amps int32) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{
