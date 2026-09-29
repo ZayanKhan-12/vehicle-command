@@ -158,6 +158,16 @@ make proto-gen   # requires protoc + protoc-gen-go
   and not a reason to invent VehicleAction numbers. Return
   `protocol.ErrSeatClimateFleetAPI` for clients that ask this SDK to
   treat those paths as unimplemented. See teslamotors/vehicle-command#383.
+* Tesla Fleet Auth `invalid_audience` on `client_credentials` and
+  `/authorize` "No policy rules" are Tesla Identity Provider
+  provisioning, not a missing VehicleAction. `tesla-auth-token` stores a
+  token the caller already obtained; `account.New` reads JWT `aud` of
+  that token. This SDK does not mint partner tokens, bind audiences, or
+  `POST /api/1/partner_accounts` without a token. Do not invent an
+  audience, retry regional Fleet API hosts as a workaround, or commit
+  client secrets. Return `protocol.ErrPartnerOAuthNotProvisioned`.
+  Direct dashboard/OAuth provisioning questions to Tesla developer
+  Support Inquiry. See teslamotors/vehicle-command#460.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

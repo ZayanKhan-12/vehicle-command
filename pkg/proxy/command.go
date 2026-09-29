@@ -111,6 +111,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// Tesla signed_command HTTP 501 Unauthorized is Fleet API, not a
 		// missing handler. teslamotors/vehicle-command#383.
 		return nil, protocol.ErrSeatClimateFleetAPI
+	case "partner_token", "register_partner", "oauth_audience", "invalid_audience":
+		// Tesla Fleet Auth invalid_audience /authorize "No policy rules" is
+		// Tesla IdP provisioning, not a missing VehicleAction.
+		// teslamotors/vehicle-command#460.
+		return nil, protocol.ErrPartnerOAuthNotProvisioned
 	case "scheduled_charging_overheat", "force_scheduled_charging":
 		// Schedule commands are published; later sleep/wake is firmware.
 		// Do not disable cabin overheat as a workaround.

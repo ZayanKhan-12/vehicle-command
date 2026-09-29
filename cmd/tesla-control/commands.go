@@ -1035,6 +1035,14 @@ var commands = map[string]*Command{
 			return protocol.ErrSeatClimateFleetAPI
 		},
 	},
+	"partner-oauth": {
+		help:             "Tesla Fleet Auth invalid_audience and /authorize No policy rules are Tesla IdP provisioning. tesla-auth-token only stores a token; this tool cannot mint a partner token or bind audiences. See teslamotors/vehicle-command#460.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrPartnerOAuthNotProvisioned
+		},
+	},
 	"autosecure-modelx": {
 		help:             "Close falcon-wing doors and lock vehicle. Model X only.",
 		requiresAuth:     true,

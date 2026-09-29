@@ -263,6 +263,33 @@ get [`protocol.ErrSeatClimateFleetAPI`](error.go) from
 `seat_heater_not_implemented` / `seat_cooler_not_implemented` /
 `remote_seat_climate_not_implemented` (HTTP 400 before a session).
 
+### Partner token `invalid_audience` and `/authorize` "No policy rules"
+
+This repository **does not mint Tesla OAuth tokens**.
+`tesla-auth-token` writes a token the caller already obtained to the
+system keyring. [`account.New`](../account/account.go) reads the JWT
+`aud` claim of that token to pick a Fleet API host. That is unrelated
+to Tesla Fleet Auth rejecting `grant_type=client_credentials` with
+`invalid_audience`, or `GET /oauth2/v3/authorize` showing
+"No policy rules".
+
+Those errors mean Tesla's Identity Provider has not bound OAuth
+policy/audience to the application, even when the developer dashboard
+shows the app as Active and `client_id`/`client_secret` are accepted
+(`unauthorized_client` vs `invalid_audience` vs `client_not_found`).
+`POST /api/1/partner_accounts` requires a partner token Tesla has not
+issued. This SDK does not invent an audience, POST partner
+registration without a token, or send client secrets. Retrying NA/EU/CN
+`fleet-api` audience URLs does not provision Tesla's IdP. File a
+Support Inquiry from the Tesla developer dashboard
+([issue #460](https://github.com/teslamotors/vehicle-command/issues/460)).
+
+Callers that ask this library to obtain a partner token or bind
+audiences get [`protocol.ErrPartnerOAuthNotProvisioned`](error.go) from
+`tesla-control partner-oauth` and proxy paths `partner_token` /
+`register_partner` / `oauth_audience` / `invalid_audience` (HTTP 400
+before a session).
+
 ## Protocol concepts
 
 This section provides an overview of concepts handled by the protocol.

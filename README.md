@@ -165,6 +165,18 @@ the vehicle's owner. See [Tesla's
 website](https://developer.tesla.com/docs/fleet-api/getting-started/what-is-fleet-api) for instructions on
 registering a developer account and obtaining OAuth tokens.
 
+Tesla Fleet Auth `invalid_audience` on `client_credentials` and
+`/authorize` "No policy rules" are Tesla Identity Provider
+provisioning, even when the developer dashboard shows the app as Active
+([issue #460](https://github.com/teslamotors/vehicle-command/issues/460)).
+`tesla-auth-token` only stores a token you already obtained. This SDK
+does not mint partner tokens, bind OAuth audiences, or
+`POST /api/1/partner_accounts` without a token. Retrying NA/EU/CN
+audience URLs does not provision Tesla's IdP. Use Tesla developer
+dashboard Support Inquiry. The proxy returns HTTP 400
+(`protocol.ErrPartnerOAuthNotProvisioned`) for `partner_token` /
+`register_partner` / `oauth_audience` / `invalid_audience`.
+
 ### Generating a command-authentication private key
 
 Even if your client has a valid token, the vehicle only accepts commands that
@@ -402,6 +414,13 @@ The heater body accepts Owner/Fleet `"heater"` as an alias for
 forwards Tesla's status (`Not Implemented`). The proxy returns HTTP 400
 (`protocol.ErrSeatClimateFleetAPI`) for `seat_heater_not_implemented` /
 `seat_cooler_not_implemented` / `remote_seat_climate_not_implemented`.
+
+Tesla Fleet Auth `invalid_audience` and `/authorize` "No policy rules"
+are Tesla OAuth provisioning
+([issue #460](https://github.com/teslamotors/vehicle-command/issues/460)).
+This SDK does not mint partner tokens. The proxy returns HTTP 400
+(`protocol.ErrPartnerOAuthNotProvisioned`) for `partner_token` /
+`register_partner` / `oauth_audience` / `invalid_audience`.
 
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN

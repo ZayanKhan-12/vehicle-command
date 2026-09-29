@@ -122,6 +122,16 @@ partner/region/OAuth allowlist, not a missing command.
 `tesla-control seat-heater-not-implemented` returns
 `ErrSeatClimateFleetAPI`.
 
+Tesla Fleet Auth `invalid_audience` on `client_credentials` and
+`/authorize` "No policy rules" are Tesla Identity Provider
+provisioning
+([issue #460](https://github.com/teslamotors/vehicle-command/issues/460)).
+`tesla-auth-token` only stores a token the caller already obtained.
+This tool cannot mint a partner token, bind audiences, or
+`POST /api/1/partner_accounts`.
+`tesla-control partner-oauth` returns
+`ErrPartnerOAuthNotProvisioned`.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

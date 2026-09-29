@@ -126,6 +126,19 @@ seat_cooler_not_implemented, or remote_seat_climate_not_implemented
 returns HTTP 400 with [protocol.ErrSeatClimateFleetAPI] before opening
 a vehicle session. See teslamotors/vehicle-command#383.
 
+# Partner OAuth audience / policy
+
+POST partner_token, register_partner, oauth_audience, or
+invalid_audience returns HTTP 400 with
+[protocol.ErrPartnerOAuthNotProvisioned] before opening a vehicle
+session. Tesla Fleet Auth invalid_audience on client_credentials and
+/authorize "No policy rules" mean Tesla has not bound OAuth
+policy/audience to the application. tesla-http-proxy consumes an
+already-issued OAuth token; it does not mint partner tokens or POST
+/api/1/partner_accounts. Cycling regional fleet-api audience URLs
+does not provision Tesla's IdP. Use Tesla developer dashboard Support
+Inquiry. See teslamotors/vehicle-command#460.
+
 # Request cancellation
 
 Per-request timeouts in forwardRequest and handleVehicleCommand are derived

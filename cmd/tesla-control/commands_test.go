@@ -235,6 +235,20 @@ func TestSeatHeaterNotImplementedCommandReturnsFleetAPIError(t *testing.T) {
 	}
 }
 
+func TestPartnerOAuthCommandReturnsProvisioningError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["partner-oauth"]
+	if !ok {
+		t.Fatal("missing partner-oauth")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("partner-oauth help command must not require a token Tesla has not issued")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrPartnerOAuthNotProvisioned) {
+		t.Fatalf("partner-oauth handler = %v, want ErrPartnerOAuthNotProvisioned", err)
+	}
+}
+
 func TestSeatHeaterAndCoolerCommandsAreImplemented(t *testing.T) {
 	t.Parallel()
 	for _, name := range []string{"seat-heater", "seat-cooler"} {
