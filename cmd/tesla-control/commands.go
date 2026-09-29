@@ -1338,8 +1338,16 @@ var commands = map[string]*Command{
 			return car.BatchRemovePreconditionSchedules(ctx, home, work, other)
 		},
 	},
+	"ble-state-fast": {
+		help:             "BLE GetDriveState latency is the vehicle round-trip (~250-300ms). This tool cannot guarantee <150ms, disable encryption, or stream DriveState. Reuse the session; see teslamotors/vehicle-command#414.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrBLEStateLatencyFirmware
+		},
+	},
 	"state": {
-		help:             "Fetch vehicle state over BLE.",
+		help:             "Fetch one vehicle-state category over BLE (one Infotainment round-trip, typically ~250-300ms). Reuse the session; this is not a sub-150ms stream. See teslamotors/vehicle-command#414.",
 		requiresAuth:     true,
 		requiresFleetAPI: false,
 		args: []Argument{

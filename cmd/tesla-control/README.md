@@ -44,6 +44,14 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+`tesla-control state drive` is one Infotainment round-trip (~250–300ms
+observed). BLE GetDriveState latency is vehicle firmware plus radio, not
+a client timer
+([issue #414](https://github.com/teslamotors/vehicle-command/issues/414)).
+Reuse the session; handshake plus GetState is two RTTs (~500ms).
+`tesla-control ble-state-fast` returns `ErrBLEStateLatencyFirmware`.
+This tool does not disable response encryption or stream DriveState.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

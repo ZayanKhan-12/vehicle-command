@@ -36,6 +36,7 @@ type testSender struct {
 	lock          sync.Mutex
 	listening     bool
 	fixedResponse *universal.RoutableMessage
+	lastMessage   *universal.RoutableMessage
 	ch            chan *universal.RoutableMessage
 
 	// If SendError is set, Send() returns SendError. Otherwise, Send() returns
@@ -128,9 +129,10 @@ func (s *testSender) Stop() {
 	s.lock.Unlock()
 }
 
-func (s *testSender) Send(_ context.Context, _ *universal.RoutableMessage, _ connector.AuthMethod) (protocol.Receiver, error) {
+func (s *testSender) Send(_ context.Context, message *universal.RoutableMessage, _ connector.AuthMethod) (protocol.Receiver, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	s.lastMessage = message
 	if s.SendError != nil {
 		return nil, s.SendError
 	}

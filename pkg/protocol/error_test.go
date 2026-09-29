@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,18 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrBLEStateLatencyFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrBLEStateLatencyFirmware) || MayHaveSucceeded(ErrBLEStateLatencyFirmware) || ShouldRetry(ErrBLEStateLatencyFirmware) {
+		t.Fatal("firmware BLE GetDriveState latency floor must not retry")
+	}
+	if !errors.Is(fmt.Errorf("poll: %w", ErrBLEStateLatencyFirmware), ErrBLEStateLatencyFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrBLEStateLatencyFirmware")
+	}
+	if !strings.Contains(ErrBLEStateLatencyFirmware.Error(), "#414") {
+		t.Fatal("error must cite teslamotors/vehicle-command#414")
 	}
 }

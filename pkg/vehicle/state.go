@@ -66,6 +66,20 @@ func (c StateCategory) submessage() *carserver.GetVehicleData {
 // StateCategoryLocation may return a few different (latitude, longitude) fields. See
 // [carserver.LocationState] documentation for an explanation.
 //
+// # BLE poll latency
+//
+// Each GetState is one signed Infotainment round-trip. Callers have measured
+// ~250–300ms of BLE time versus a few milliseconds of client construction and
+// encryption (teslamotors/vehicle-command#414). That floor is vehicle
+// firmware plus radio, not a client sleep. Handshake once (StartSession) and
+// reuse the session; reconnecting or requesting extra categories adds another
+// RTT (~500ms for handshake+GetState). There is no published streaming
+// DriveState VehicleAction. Do not disable FLAG_ENCRYPT_RESPONSE or shorten
+// UUIDs to chase a sub-150ms poll. High-rate streaming is
+// teslamotors/fleet-telemetry. Clients that ask this library to guarantee
+// <150ms get protocol.ErrBLEStateLatencyFirmware from tesla-control
+// ble-state-fast rather than an unsafe workaround.
+//
 // [vehicle data]: https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-endpoints#vehicle-data
 func (v *Vehicle) GetState(ctx context.Context, category StateCategory) (*carserver.VehicleData, error) {
 	submessage := category.submessage()

@@ -69,6 +69,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "ble_state_fast", "drive_state_fast", "set_ble_poll_interval":
+		// GetState latency is the vehicle BLE round-trip. Do not disable
+		// encryption or invent a streaming DriveState. teslamotors/vehicle-command#414.
+		return nil, protocol.ErrBLEStateLatencyFirmware
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
