@@ -129,7 +129,7 @@ func main() {
 		logger.Printf("Failed to connect to vehicle: %s\n", err)
 		return
 	}
-	defer car.Disconnect()
+	defer car.Disconnect() // ends the BLE session so the car does not treat this client as a key still present (Walk-Away Door Lock; teslamotors/vehicle-command#480)
 
 	// Most interactions with the car require an authenticated client.
 	// StartSession() performs a handshake with the vehicle that allows

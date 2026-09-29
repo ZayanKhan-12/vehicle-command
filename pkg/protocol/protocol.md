@@ -163,6 +163,40 @@ encoding of the message length.
 *Note*: Due to hardware constraints, VCSEC can only reliably maintain up to
 three simultaneous BLE connections. These are shared by keyfobs and phone keys.
 
+### BLE keys and Walk-Away Door Lock
+
+Enrolling a public key with `add-key-request` / `Vehicle.AddKey` puts that
+key on the VCSEC **whitelist**. From the vehicle's point of view it is a
+key, the same whitelist used by phone keys and keyfobs. Role (Owner,
+Driver, …) only decides which **commands** the key may authorize. Form
+factor (`nfc_card`, `ios_device`, `android_device`, `cloud_key`) is
+`KeyMetadata` display metadata, not a documented exemption from presence
+detection.
+
+Tesla's owner documentation treats a paired phone left inside with
+Bluetooth enabled as equivalent to leaving keys in the car: Walk-Away Door
+Lock does not lock because an authenticated BLE key is still present.
+VCSEC has no published field that marks a whitelist entry as
+"command-only, ignore for passive-entry / Walk-Away Door Lock." Inventing
+one would collide with firmware this repository cannot update.
+
+An in-car BLE button that stays connected, or reconnects on a timer, can
+therefore prevent automatic locking. That is expected firmware behavior,
+not a library bug. The supported architecture is:
+
+1. Connect over BLE when a command is needed.
+2. Handshake, send the command, then `Vehicle.Disconnect` /
+   `connector.Close` so the GATT session ends.
+3. Do not advertise or reconnect while the vehicle is parked with people
+   walking away.
+
+`tesla-control` already disconnects when the process exits. Embedded
+controllers must do the same after each button press. The library returns
+[`protocol.ErrBLEKeyPresenceNotInProtocol`](error.go) for
+`tesla-control ble-presence-exempt` and proxy paths `ble_presence_exempt`
+/ `command_only_key` rather than guessing a whitelist flag. See
+[issue #480](https://github.com/teslamotors/vehicle-command/issues/480).
+
 ## Protocol concepts
 
 This section provides an overview of concepts handled by the protocol.

@@ -247,3 +247,13 @@ func TestErrBatteryOptionCatalog(t *testing.T) {
 		}
 	}
 }
+
+func TestErrBLEKeyPresenceNotInProtocol(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrBLEKeyPresenceNotInProtocol) || MayHaveSucceeded(ErrBLEKeyPresenceNotInProtocol) || ShouldRetry(ErrBLEKeyPresenceNotInProtocol) {
+		t.Fatal("unpublished BLE presence-exempt keys must not retry")
+	}
+	if !errors.Is(fmt.Errorf("in-car button: %w", ErrBLEKeyPresenceNotInProtocol), ErrBLEKeyPresenceNotInProtocol) {
+		t.Fatal("callers must be able to errors.Is ErrBLEKeyPresenceNotInProtocol")
+	}
+}

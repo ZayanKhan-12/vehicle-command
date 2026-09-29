@@ -178,3 +178,17 @@ func TestKeepAwakeCommandReturnsProtocolError(t *testing.T) {
 		t.Fatalf("keep-awake handler = %v, want ErrKeepAwakeNotInProtocol", err)
 	}
 }
+
+func TestBLEPresenceExemptCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["ble-presence-exempt"]
+	if !ok {
+		t.Fatal("missing ble-presence-exempt")
+	}
+	if info.requiresFleetAPI {
+		t.Error("ble-presence-exempt help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrBLEKeyPresenceNotInProtocol) {
+		t.Fatalf("ble-presence-exempt handler = %v, want ErrBLEKeyPresenceNotInProtocol", err)
+	}
+}

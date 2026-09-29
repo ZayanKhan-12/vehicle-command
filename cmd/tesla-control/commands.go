@@ -427,13 +427,13 @@ var commands = map[string]*Command{
 		},
 	},
 	"add-key-request": {
-		help:             "Request NFC-card approval for an enrolling PUBLIC_KEY with ROLE and FORM_FACTOR",
+		help:             "Request NFC-card approval for an enrolling PUBLIC_KEY. The result is a VCSEC whitelist key; a BLE client left connected inside can prevent Walk-Away Door Lock. See teslamotors/vehicle-command#480.",
 		requiresAuth:     false,
 		requiresFleetAPI: false,
 		args: []Argument{
 			{name: "PUBLIC_KEY", help: "file containing public key (or corresponding private key)"},
 			{name: "ROLE", help: "One of: owner, driver, fm (fleet manager), vehicle_monitor, charging_manager"},
-			{name: "FORM_FACTOR", help: "One of: nfc_card, ios_device, android_device, cloud_key"},
+			{name: "FORM_FACTOR", help: "One of: nfc_card, ios_device, android_device, cloud_key. Form factor is display metadata, not a Walk-Away Door Lock exemption; see teslamotors/vehicle-command#480."},
 		},
 		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
 			role, ok := keys.Role_value["ROLE_"+strings.ToUpper(args["ROLE"])]
@@ -902,6 +902,14 @@ var commands = map[string]*Command{
 		},
 		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
 			return protocol.ErrWiFiNotInProtocol
+		},
+	},
+	"ble-presence-exempt": {
+		help:             "There is no published VCSEC flag to enroll a BLE client that is ignored for Walk-Away Door Lock. Enrolled BLE devices are keys; disconnect after commands. See teslamotors/vehicle-command#480.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrBLEKeyPresenceNotInProtocol
 		},
 	},
 	"tonneau-open": {

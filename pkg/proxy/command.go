@@ -81,6 +81,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// Pack identity is Fleet DX catalog metadata, not a signed command.
 		// teslamotors/vehicle-command#391.
 		return nil, protocol.ErrBatteryOptionRequiresFleetAPI
+	case "ble_presence_exempt", "command_only_key":
+		// Enrolled BLE clients are VCSEC whitelist keys. Tesla has not
+		// published a flag that ignores them for Walk-Away Door Lock.
+		// teslamotors/vehicle-command#480.
+		return nil, protocol.ErrBLEKeyPresenceNotInProtocol
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

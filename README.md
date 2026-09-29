@@ -338,6 +338,13 @@ invent codes. The proxy returns HTTP 400
 `get_battery_option` / `get_battery_size`. Use `Account.GetVehicleOptions`
 or partner `GET /api/1/vehicles/{vin}/specs` (`batteryCapacityKwh`, billed).
 
+An enrolled BLE client is a VCSEC whitelist key
+([issue #480](https://github.com/teslamotors/vehicle-command/issues/480)).
+Tesla has not published a flag that ignores it for Walk-Away Door Lock.
+The proxy returns HTTP 400 (`protocol.ErrBLEKeyPresenceNotInProtocol`) for
+`ble_presence_exempt` / `command_only_key`. In-car BLE gadgets must
+disconnect after each command.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

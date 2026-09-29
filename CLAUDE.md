@@ -104,6 +104,13 @@ make proto-gen   # requires protoc + protoc-gen-go
   first non-Canceled handshake error. Buffer the results channel to
   `len(domains)` (after expanding the default domain list) so remaining
   workers cannot block forever on send. See teslamotors/vehicle-command#494.
+* An enrolled BLE client is a VCSEC whitelist key. Role gates commands;
+  form factor is display metadata; neither is a published "ignore for
+  Walk-Away Door Lock" flag. Do not invent a command-only presence-exempt
+  whitelist field. In-car gadgets must `Disconnect` after each command so
+  they are not treated as a phone key left inside. Return
+  `protocol.ErrBLEKeyPresenceNotInProtocol`. See
+  teslamotors/vehicle-command#480.
 * BLE responses are bounded by a vehicle-side size limit (see "Response size
   limits" in `protocol.md`). Do not add client-side workarounds that disable
   response encryption or shorten UUIDs to squeeze under it.

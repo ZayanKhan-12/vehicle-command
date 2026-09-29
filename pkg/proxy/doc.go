@@ -44,6 +44,15 @@ session. Pack identity is Tesla catalog metadata
 $BT* codes; this proxy will not invent them. See
 teslamotors/vehicle-command#391.
 
+# BLE key presence / Walk-Away Door Lock
+
+POST ble_presence_exempt or command_only_key returns HTTP 400 with
+[protocol.ErrBLEKeyPresenceNotInProtocol] before opening a vehicle session.
+add-key-request enrolls a VCSEC whitelist key. Tesla has not published a
+flag that lets an in-car BLE client authorize commands while being ignored
+for Walk-Away Door Lock. Disconnect after each command. See
+teslamotors/vehicle-command#480.
+
 # Request cancellation
 
 Per-request timeouts in forwardRequest and handleVehicleCommand are derived

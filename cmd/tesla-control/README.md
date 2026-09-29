@@ -68,6 +68,13 @@ when omitted (as in [issue #391](https://github.com/teslamotors/vehicle-command/
 Do not infer pack size from `$MT322`. `tesla-control -ble options` returns
 `ErrBatteryOptionRequiresFleetAPI`.
 
+Enrolling a BLE client (`add-key-request`) creates a VCSEC whitelist key.
+A controller left connected inside the vehicle can prevent Walk-Away Door
+Lock, the same as leaving a phone key behind. There is no published
+command-only / presence-exempt enrollment. `tesla-control ble-presence-exempt`
+returns `ErrBLEKeyPresenceNotInProtocol`. Disconnect after each command.
+See [issue #480](https://github.com/teslamotors/vehicle-command/issues/480).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:
