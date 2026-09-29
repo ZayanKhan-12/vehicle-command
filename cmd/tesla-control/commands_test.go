@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -60,5 +63,19 @@ func TestGetDays(t *testing.T) {
 		} else if mask != test.mask {
 			t.Errorf("day string '%s' gave mask %s instead of %s", test.str, strconv.FormatInt(int64(mask), 2), strconv.FormatInt(int64(test.mask), 2))
 		}
+	}
+}
+
+func TestPartnerOAuthCommandReturnsProvisioningError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["partner-oauth"]
+	if !ok {
+		t.Fatal("missing partner-oauth")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("partner-oauth help command must not require a token Tesla has not issued")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrPartnerOAuthNotProvisioned) {
+		t.Fatalf("partner-oauth handler = %v, want ErrPartnerOAuthNotProvisioned", err)
 	}
 }

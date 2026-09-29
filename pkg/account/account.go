@@ -132,6 +132,8 @@ func New(oauthToken, userAgent string) (*Account, error) {
 
 	domain := payload.domain()
 	if domain == "" {
+		// JWT aud of an already-issued token, not Tesla Fleet Auth
+		// invalid_audience on client_credentials (teslamotors/vehicle-command#460).
 		return nil, fmt.Errorf("client provided OAuth token with invalid audiences")
 	}
 	return &Account{

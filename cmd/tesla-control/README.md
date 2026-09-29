@@ -59,4 +59,14 @@ you can also send commands over the Internet:
 tesla-control lock
 ```
 
+Tesla Fleet Auth `invalid_audience` on `client_credentials` and
+`/authorize` "No policy rules" are Tesla Identity Provider
+provisioning
+([issue #460](https://github.com/teslamotors/vehicle-command/issues/460)).
+`tesla-auth-token` only stores a token the caller already obtained.
+This tool cannot mint a partner token, bind audiences, or
+`POST /api/1/partner_accounts`.
+`tesla-control partner-oauth` returns
+`ErrPartnerOAuthNotProvisioned`.
+
 Run `tesla-control -h` to see a full list of supported commands.

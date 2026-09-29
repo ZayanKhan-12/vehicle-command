@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,21 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrPartnerOAuthNotProvisioned(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrPartnerOAuthNotProvisioned) || MayHaveSucceeded(ErrPartnerOAuthNotProvisioned) || ShouldRetry(ErrPartnerOAuthNotProvisioned) {
+		t.Fatal("Tesla OAuth audience/policy provisioning must not retry as a client audience typo")
+	}
+	if !errors.Is(fmt.Errorf("token: %w", ErrPartnerOAuthNotProvisioned), ErrPartnerOAuthNotProvisioned) {
+		t.Fatal("callers must be able to errors.Is ErrPartnerOAuthNotProvisioned")
+	}
+	if !strings.Contains(ErrPartnerOAuthNotProvisioned.Error(), "#460") {
+		t.Fatal("error must cite teslamotors/vehicle-command#460")
+	}
+	if !strings.Contains(ErrPartnerOAuthNotProvisioned.Error(), "invalid_audience") {
+		t.Fatal("error must name Tesla Fleet Auth invalid_audience")
 	}
 }

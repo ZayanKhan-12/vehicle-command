@@ -50,8 +50,18 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrPartnerOAuthNotProvisioned indicates Tesla Fleet Auth rejected
+	// client_credentials with invalid_audience, or /authorize showed
+	// "No policy rules". tesla-auth-token only stores a token the caller
+	// already obtained; account.New only reads the JWT aud claim of that
+	// token. This SDK does not mint partner tokens, bind OAuth audiences, or
+	// POST /api/1/partner_accounts without a token. A dashboard "Active" app
+	// can still lack Tesla IdP policy/audience. Trying every regional
+	// fleet-api audience does not provision it. Use Tesla developer dashboard
+	// Support Inquiry. See teslamotors/vehicle-command#460.
+	ErrPartnerOAuthNotProvisioned = NewError("Tesla Fleet Auth invalid_audience and /authorize \"No policy rules\" mean Tesla has not bound OAuth policy/audience to the application. This SDK stores tokens (tesla-auth-token) and does not mint partner tokens or register partner_accounts. Use Tesla developer dashboard Support Inquiry. See teslamotors/vehicle-command#460", false, false)
+	ErrRequiresEncryption         = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext        = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

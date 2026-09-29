@@ -69,6 +69,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "partner_token", "register_partner", "oauth_audience", "invalid_audience":
+		// Tesla Fleet Auth invalid_audience /authorize "No policy rules" is
+		// Tesla IdP provisioning, not a missing VehicleAction.
+		// teslamotors/vehicle-command#460.
+		return nil, protocol.ErrPartnerOAuthNotProvisioned
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
