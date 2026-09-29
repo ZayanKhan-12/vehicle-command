@@ -310,6 +310,16 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+Fleet API lists `remote_boombox`
+([issue #266](https://github.com/teslamotors/vehicle-command/issues/266),
+[issue #411](https://github.com/teslamotors/vehicle-command/issues/411)),
+but Tesla has not published a VehicleAction for the external speaker.
+A collaborator stated legal review of Pedestrian Warning System
+restrictions is required before this SDK can ship it. Unsigned REST
+returns 403 Vehicle Command Protocol required. The proxy returns HTTP 400
+(`protocol.ErrBoomboxNotInProtocol`) and does not invent a field, copy a
+firmware dump, or map boombox onto `honk_horn`.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

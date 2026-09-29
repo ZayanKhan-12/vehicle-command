@@ -219,6 +219,35 @@ order to provide roadside assistance, as well as remotely delete (but not add)
 Driver, Guest, and Fleet Manager keys. Vehicles in their default state prevent
 Service keys from authorizing other commands over the Internet.
 
+### Remote boombox (external speaker)
+
+Fleet API documents `POST .../command/remote_boombox` with `{"sound": 0}`
+(random) or `{"sound": 2000}` (locate ping). Vehicles that require the
+Vehicle Command Protocol reject **unsigned** REST with HTTP 403.
+
+The published [`car_server.proto`](protobuf/car_server.proto) in this
+repository has `VehicleControlHonkHornAction` (field 27) and
+`VehicleControlFlashLightsAction` (field 26), but **no** boombox /
+play-sound `VehicleAction`. Tesla has not added one. A Tesla collaborator
+stated on [issue #266](https://github.com/teslamotors/vehicle-command/issues/266)
+that boombox stays unpublished pending legal approval and a disclaimer:
+Pedestrian Warning System use is restricted in some jurisdictions.
+Third-party firmware dumps and closed-source apps are **not** Tesla's
+published protocol. Copying an unpublished oneof member into this
+repository would collide with firmware this SDK cannot update and would
+release code Tesla has not cleared.
+
+Mapping boombox onto honk would change vehicle behavior (horn vs external
+speaker). Locate ping is also firmware-gated (for example robotaxi /
+speed limits reported by third parties); this SDK does not guess those
+rules.
+
+The proxy therefore returns [`protocol.ErrBoomboxNotInProtocol`](error.go)
+for `remote_boombox` (HTTP 400 before a session) instead of a generic
+"command not implemented". `tesla-control boombox` returns the same
+error. See [issue #266](https://github.com/teslamotors/vehicle-command/issues/266)
+and [issue #411](https://github.com/teslamotors/vehicle-command/issues/411).
+
 ### Metadata serialization
 
 The protocol requires peers to authenticate messages in a way that binds them

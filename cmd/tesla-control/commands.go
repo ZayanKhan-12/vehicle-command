@@ -778,6 +778,17 @@ var commands = map[string]*Command{
 			return car.Wakeup(ctx)
 		},
 	},
+	"boombox": {
+		help:             "remote_boombox is not in the published protocol. Tesla has not released a VehicleAction pending legal review of Pedestrian Warning System restrictions. See teslamotors/vehicle-command#266.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		optional: []Argument{
+			{name: "SOUND", help: "Fleet API sound id (0 random, 2000 locate). Ignored; no request is sent."},
+		},
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrBoomboxNotInProtocol
+		},
+	},
 	"tonneau-open": {
 		help:             "Open Cybertruck tonneau.",
 		requiresAuth:     true,

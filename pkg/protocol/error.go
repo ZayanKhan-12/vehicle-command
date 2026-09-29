@@ -50,6 +50,18 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
+	// ErrBoomboxNotInProtocol indicates a client asked to play the external
+	// speaker (Fleet API remote_boombox / "fart" / locate ping). Fleet API
+	// still lists the REST path, but Tesla has not published a VehicleAction
+	// for it. Honk and flash-lights are published (fields 27 and 26). A Tesla
+	// collaborator stated boombox stays unpublished pending legal approval
+	// because Pedestrian Warning System use is restricted by jurisdiction
+	// (teslamotors/vehicle-command#266). Guessing an unused oneof number, or
+	// copying a field from a third-party firmware dump, would collide with
+	// firmware and release code this repository is not cleared to ship.
+	// Unsigned REST is rejected with 403 Vehicle Command Protocol required.
+	// See teslamotors/vehicle-command#266 and #411.
+	ErrBoomboxNotInProtocol = NewError("remote_boombox is not in the published vehicle command protocol (no VehicleAction; Tesla has not released it pending legal review of Pedestrian Warning System restrictions). Do not invent or copy a field number. See teslamotors/vehicle-command#266", false, false)
 	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
 	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
