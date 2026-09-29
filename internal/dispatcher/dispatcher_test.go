@@ -789,6 +789,33 @@ func TestStopDispatcher(t *testing.T) {
 	}
 }
 
+func TestStartCanceledStopsListener(t *testing.T) {
+	conn := newDummyConnector(t)
+	defer conn.Close()
+
+	key, err := authentication.NewECDHPrivateKey(rand.Reader)
+	if err != nil {
+		t.Fatalf("Couldn't create private key: %s", err)
+	}
+	dispatcher, err := New(conn, key)
+	if err != nil {
+		t.Fatalf("Couldn't initialize dispatcher: %s", err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := dispatcher.Start(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("Start = %v, want context.Canceled", err)
+	}
+
+	sendCtx, sendCancel := context.WithTimeout(context.Background(), time.Second)
+	defer sendCancel()
+	if _, err := dispatcher.Send(sendCtx, testCommand(), connector.AuthMethodHMAC); !errors.Is(err, protocol.ErrNotConnected) {
+		t.Fatalf("Send after canceled Start = %v, want ErrNotConnected", err)
+	}
+	dispatcher.Stop()
+}
+
 func TestDoNotBlockOnResponder(t *testing.T) {
 	// Verifies that if a Responder's inbox is full, sending another message to
 	// that Responder does not prevent other Responders from receiving
