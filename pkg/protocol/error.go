@@ -50,8 +50,19 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrBLEKeyPresenceNotInProtocol indicates a client asked to enroll a BLE
+	// device that can authorize commands but is ignored for Walk-Away Door Lock
+	// / passive-entry presence. add-key-request puts the public key on the
+	// VCSEC whitelist; that is a vehicle key. KeyMetadata stores only form
+	// factor, and Role only gates commands. Tesla has not published a whitelist
+	// flag that exempts an enrolled BLE client from key-presence. Leave the
+	// GATT session connected (or reconnect periodically) inside the cabin and
+	// the vehicle can treat the device like a phone key left behind. The
+	// supported in-car architecture is connect, command, Disconnect. See
+	// teslamotors/vehicle-command#480.
+	ErrBLEKeyPresenceNotInProtocol = NewError("an enrolled BLE client is a VCSEC whitelist key; Tesla has not published a flag to ignore it for Walk-Away Door Lock. Disconnect after commands. See teslamotors/vehicle-command#480", false, false)
+	ErrRequiresEncryption          = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext         = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

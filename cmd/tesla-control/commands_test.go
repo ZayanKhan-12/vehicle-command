@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -60,5 +63,19 @@ func TestGetDays(t *testing.T) {
 		} else if mask != test.mask {
 			t.Errorf("day string '%s' gave mask %s instead of %s", test.str, strconv.FormatInt(int64(mask), 2), strconv.FormatInt(int64(test.mask), 2))
 		}
+	}
+}
+
+func TestBLEPresenceExemptCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["ble-presence-exempt"]
+	if !ok {
+		t.Fatal("missing ble-presence-exempt")
+	}
+	if info.requiresFleetAPI {
+		t.Error("ble-presence-exempt help command must not require Fleet API")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrBLEKeyPresenceNotInProtocol) {
+		t.Fatalf("ble-presence-exempt handler = %v, want ErrBLEKeyPresenceNotInProtocol", err)
 	}
 }

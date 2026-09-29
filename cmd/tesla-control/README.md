@@ -44,6 +44,13 @@ tesla-control -ble add-key-request public_key.pem owner cloud_key
 The program should instruct you to confirm the new key by tapping your NFC card
 on the center console.
 
+Enrolling a BLE client (`add-key-request`) creates a VCSEC whitelist key.
+A controller left connected inside the vehicle can prevent Walk-Away Door
+Lock, the same as leaving a phone key behind. There is no published
+command-only / presence-exempt enrollment. `tesla-control ble-presence-exempt`
+returns `ErrBLEKeyPresenceNotInProtocol`. Disconnect after each command.
+See [issue #480](https://github.com/teslamotors/vehicle-command/issues/480).
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

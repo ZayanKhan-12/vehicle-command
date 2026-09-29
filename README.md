@@ -310,6 +310,13 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+An enrolled BLE client is a VCSEC whitelist key
+([issue #480](https://github.com/teslamotors/vehicle-command/issues/480)).
+Tesla has not published a flag that ignores it for Walk-Away Door Lock.
+The proxy returns HTTP 400 (`protocol.ErrBLEKeyPresenceNotInProtocol`) for
+`ble_presence_exempt` / `command_only_key`. In-car BLE gadgets must
+disconnect after each command.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

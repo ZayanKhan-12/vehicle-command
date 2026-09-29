@@ -242,6 +242,12 @@ func (v *Vehicle) TriggerHomelink(ctx context.Context, latitude float32, longitu
 
 // AddKey adds a public key to the vehicle's whitelist. If isOwner is true, the new key can
 // authorize changes to vehicle access controls, such as adding/removing other keys.
+//
+// The enrolled public key is a VCSEC whitelist key. Role and formFactor do not
+// create a "command-only" credential that Walk-Away Door Lock ignores. BLE
+// clients that stay connected inside the vehicle can prevent automatic locking.
+// Disconnect after commands. See teslamotors/vehicle-command#480 and
+// [protocol.ErrBLEKeyPresenceNotInProtocol].
 func (v *Vehicle) AddKey(ctx context.Context, publicKey *ecdh.PublicKey, isOwner bool, formFactor vcsec.KeyFormFactor) error {
 	if isOwner {
 		return v.AddKeyWithRole(ctx, publicKey, keys.Role_ROLE_OWNER, formFactor)

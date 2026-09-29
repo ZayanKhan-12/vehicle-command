@@ -171,6 +171,10 @@ func (v *Vehicle) StartSession(ctx context.Context, domains []universal.Domain) 
 // [connector.Connector] interface definition requires that multiple calls to Close() are safe, and so
 // it is safe to defer both this method and the Connector's Close() method; however, Disconnect must
 // be invoked first.
+//
+// Over BLE, ending the session is required for in-car gadgets: an enrolled
+// client that stays connected can be treated as a key still present and can
+// prevent Walk-Away Door Lock. See teslamotors/vehicle-command#480.
 func (v *Vehicle) Disconnect() {
 	v.dispatcher.Stop()
 	if v.conn != nil {
