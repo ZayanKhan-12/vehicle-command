@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,39 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrClimateKeeperCPDFirmware(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrClimateKeeperCPDFirmware) || MayHaveSucceeded(ErrClimateKeeperCPDFirmware) || ShouldRetry(ErrClimateKeeperCPDFirmware) {
+		t.Fatal("CPD Dog/Camp refusal must not retry in Vehicle.Send")
+	}
+	if !errors.Is(fmt.Errorf("dog mode: %w", ErrClimateKeeperCPDFirmware), ErrClimateKeeperCPDFirmware) {
+		t.Fatal("callers must be able to errors.Is ErrClimateKeeperCPDFirmware")
+	}
+	if !strings.Contains(ErrClimateKeeperCPDFirmware.Error(), "#509") {
+		t.Fatal("error must cite teslamotors/vehicle-command#509")
+	}
+}
+
+func TestIsClimateKeeperCPDEnabled(t *testing.T) {
+	t.Parallel()
+	nominal := &NominalError{Details: NewError("car could not execute command: cpd_enabled", false, false)}
+	if !IsClimateKeeperCPDEnabled(nominal) {
+		t.Fatal("NominalError cpd_enabled must match IsClimateKeeperCPDEnabled")
+	}
+	if !IsClimateKeeperCPDEnabled(fmt.Errorf("proxy: %w", nominal)) {
+		t.Fatal("wrapped NominalError cpd_enabled must match")
+	}
+	if !IsClimateKeeperCPDEnabled(ErrClimateKeeperCPDFirmware) {
+		t.Fatal("ErrClimateKeeperCPDFirmware must match IsClimateKeeperCPDEnabled")
+	}
+	other := &NominalError{Details: NewError("car could not execute command: already_on", false, false)}
+	if IsClimateKeeperCPDEnabled(other) {
+		t.Fatal("unrelated NominalError must not match")
+	}
+	if IsClimateKeeperCPDEnabled(nil) || IsClimateKeeperCPDEnabled(errors.New("cpd_enabled")) {
+		t.Fatal("plain errors and nil must not match")
 	}
 }

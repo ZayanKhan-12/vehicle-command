@@ -310,6 +310,16 @@ A command's flow through the system:
 
 The HTTP proxy implements the [Tesla Fleet API vehicle command endpoints](https://developer.tesla.com/docs/fleet-api/endpoints/vehicle-commands).
 
+`set_climate_keeper_mode` is published Dog/Camp
+([issue #509](https://github.com/teslamotors/vehicle-command/issues/509)).
+Firmware may refuse with HTTP 200 `result:false` and reason `cpd_enabled`
+(Child Presence Detection occupancy, not Child Left Alone Detection).
+`manual_override` is a low-SOC override, not a CPD bypass
+([issue #437](https://github.com/teslamotors/vehicle-command/issues/437)).
+The proxy returns HTTP 400 (`protocol.ErrClimateKeeperCPDFirmware`) for
+`climate_keeper_cpd` / `override_cpd` / `dog_mode_cpd` /
+`camp_mode_cpd`. Live vehicle refusals stay NominalError.
+
 Legacy clients written for Owner API may be using a vehicle's Owner API ID when
 constructing URL paths. The proxy server requires clients to use the VIN
 directly, instead.

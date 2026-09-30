@@ -60,3 +60,12 @@ tesla-control lock
 ```
 
 Run `tesla-control -h` to see a full list of supported commands.
+
+`tesla-control climate-keeper MODE` sends published `HvacClimateKeeperAction`
+(off / on / dog / camp)
+([issue #509](https://github.com/teslamotors/vehicle-command/issues/509)).
+Firmware may refuse Dog/Camp with `cpd_enabled` (Child Presence Detection
+occupancy). That is not the Child Left Alone Detection setting.
+`manual_override` is a low-SOC override, not a CPD bypass
+([issue #437](https://github.com/teslamotors/vehicle-command/issues/437)).
+`tesla-control climate-keeper-cpd` returns `ErrClimateKeeperCPDFirmware`.

@@ -812,6 +812,40 @@ If a reply comes from the Infotainment domain, the client should parse the
 [car_server.proto](protobuf/car_server.proto). An application-layer status code
 is set in `Response.actionStatus`.
 
+### Climate keeper Dog/Camp vs Child Presence Detection
+
+`set_climate_keeper_mode` / `Vehicle.SetClimateKeeperMode` is published
+(`HvacClimateKeeperAction`, VehicleAction field 44). Mode 2 is Dog,
+mode 3 is Camp. tesla-http-proxy already maps the Fleet REST path.
+HTTP 200 with `result: false` and reason `cpd_enabled` is an
+application-layer [`NominalError`](error.go) from the car, not a missing
+handler.
+
+`cpd` is **Child Presence Detection** (occupancy / cabin radar firmware).
+It is not the in-car **Child Left Alone Detection** setting. Turning that
+UX toggle off does not clear `cpd_enabled`. Occupants (including adults)
+can still trip CPD. `HvacClimateKeeperAction.manual_override` is a
+low-SOC override, the same pattern as climate power; it is **not** a CPD
+bypass. Tesla firmware still refuses Dog/Camp with `cpd_enabled` when
+`manual_override` is true
+([issue #437](https://github.com/teslamotors/vehicle-command/issues/437)).
+A Tesla collaborator noted that exposing a CPD override in a public API
+would require care.
+
+Tesla has not published a `VehicleAction` to disable CPD, a confirmation
+flow, or an extra OAuth scope for third-party Dog/Camp. Inventing an
+unused oneof would collide with firmware. This SDK still delivers the
+published action so a future firmware grant works without an SDK change.
+Callers that ask this library to bypass CPD, or to treat Child Left Alone
+Detection as sufficient, get
+[`protocol.ErrClimateKeeperCPDFirmware`](error.go) from
+`tesla-control climate-keeper-cpd` and proxy paths `climate_keeper_cpd`,
+`override_cpd`, `dog_mode_cpd`, and `camp_mode_cpd` (HTTP 400 before a
+session). Live vehicle refusals stay `NominalError` so tesla-http-proxy
+keeps HTTP 200 `result:false`.
+[`protocol.IsClimateKeeperCPDEnabled`](error.go) matches both. See
+[issue #509](https://github.com/teslamotors/vehicle-command/issues/509).
+
 ### VCSEC application-layer responses
 
 If a reply comes from the Vehicle Security (VCSEC) domain, the client should

@@ -3,6 +3,7 @@ package protocol
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/proto"
 
@@ -50,8 +51,24 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrClimateKeeperCPDFirmware indicates a client asked this SDK to enable
+	// Dog or Camp mode despite firmware refusing with NominalError
+	// "cpd_enabled", or to treat the in-car Child Left Alone Detection
+	// setting as a CPD override. set_climate_keeper_mode is already published
+	// (HvacClimateKeeperAction field 44; Dog=2, Camp=3). tesla-http-proxy
+	// delivers it; HTTP 200 result:false with reason cpd_enabled is an
+	// application-layer refusal from the car, not a missing handler.
+	// cpd is Child Presence Detection (occupancy firmware), not the Child
+	// Left Alone Detection UX toggle. HvacClimateKeeperAction.manual_override
+	// is a low-SOC override, not a CPD bypass
+	// (teslamotors/vehicle-command#437). Tesla has not published a
+	// VehicleAction to disable CPD, a confirmation flow, or an extra OAuth
+	// scope for third-party Dog/Camp. This library still delivers the
+	// published action so a future firmware grant works without an SDK
+	// change. See teslamotors/vehicle-command#509.
+	ErrClimateKeeperCPDFirmware = NewError("set_climate_keeper_mode is published (HvacClimateKeeperAction Dog/Camp). Firmware may refuse with cpd_enabled (Child Presence Detection occupancy), which is not the Child Left Alone Detection setting. manual_override is a low-SOC override, not a CPD bypass. This SDK does not invent a CPD-disable action. See teslamotors/vehicle-command#509", false, false)
+	ErrRequiresEncryption       = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext      = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.
@@ -166,6 +183,24 @@ func IsNominalError(err error) bool {
 	}
 	var nErr *NominalError
 	return errors.As(err, &nErr)
+}
+
+// IsClimateKeeperCPDEnabled reports whether err is a Dog/Camp refusal because
+// Child Presence Detection is active. Live vehicles return HTTP 200 with
+// result:false and NominalError "car could not execute command: cpd_enabled".
+// Callers that asked this SDK to bypass CPD get ErrClimateKeeperCPDFirmware.
+// See teslamotors/vehicle-command#509 and #437.
+func IsClimateKeeperCPDEnabled(err error) bool {
+	if err == nil {
+		return false
+	}
+	if errors.Is(err, ErrClimateKeeperCPDFirmware) {
+		return true
+	}
+	if !IsNominalError(err) {
+		return false
+	}
+	return strings.Contains(strings.ToLower(err.Error()), "cpd_enabled")
 }
 
 // NominalVCSECError indicates the vehicle security controller received and authenticated a command,

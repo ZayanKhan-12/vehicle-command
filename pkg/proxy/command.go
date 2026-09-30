@@ -69,6 +69,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "climate_keeper_cpd", "override_cpd", "dog_mode_cpd", "camp_mode_cpd":
+		// set_climate_keeper_mode is published. Firmware may refuse Dog/Camp
+		// with cpd_enabled. Do not invent a CPD bypass.
+		// teslamotors/vehicle-command#509.
+		return nil, protocol.ErrClimateKeeperCPDFirmware
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":
@@ -138,6 +143,8 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetCabinOverheatProtection(ctx, on, fanOnly) }, nil
 	case "set_climate_keeper_mode":
+		// HvacClimateKeeperAction. Firmware may refuse Dog/Camp with
+		// NominalError cpd_enabled. teslamotors/vehicle-command#509.
 		// 0 : off
 		// 1 : On
 		// 2 : Dog
