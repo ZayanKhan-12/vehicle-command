@@ -150,6 +150,16 @@ make proto-gen   # requires protoc + protoc-gen-go
   `passenger_temp_setting`; do not invent an `is_climate_split` field
   or unused oneof. Return `protocol.ErrClimateSplitNotInProtocol`. See
   teslamotors/vehicle-command#386.
+* `set_climate_keeper_mode` (Dog=2, Camp=3) is published
+  `HvacClimateKeeperAction`. Firmware may refuse with NominalError
+  `cpd_enabled` (Child Presence Detection occupancy radar). That is not
+  the in-car Child Left Alone Detection setting. `manual_override` is a
+  low-SOC override, not a CPD bypass (teslamotors/vehicle-command#437).
+  Do not invent a CPD-disable oneof or wrap climate-on as Dog Mode.
+  Deliver the published action; return
+  `protocol.ErrClimateKeeperCPDFirmware` for clients that ask this SDK
+  to bypass CPD. Live refusals stay `*protocol.NominalError` (HTTP 200
+  `result:false`). See teslamotors/vehicle-command#509.
 * Charging Manager (`ROLE_CHARGING_MANAGER`) authorizes charging
   start/stop/amps. Charge-port open/close is firmware-gated
   (`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`). Deliver

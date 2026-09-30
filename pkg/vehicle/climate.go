@@ -293,6 +293,12 @@ const (
 	ClimateKeeperModeCamp = carserver.HvacClimateKeeperAction_ClimateKeeperAction_Camp
 )
 
+// SetClimateKeeperMode sends HvacClimateKeeperAction (Off/On/Dog/Camp).
+// Firmware may refuse Dog/Camp with NominalError "cpd_enabled" (Child
+// Presence Detection occupancy). That is not the in-car Child Left Alone
+// Detection setting. override is a low-SOC bit, not a CPD bypass
+// (teslamotors/vehicle-command#437). This method still delivers the
+// published action. See teslamotors/vehicle-command#509.
 func (v *Vehicle) SetClimateKeeperMode(ctx context.Context, mode ClimateKeeperMode, override bool) error {
 	return v.executeCarServerAction(ctx,
 		&carserver.Action_VehicleAction{

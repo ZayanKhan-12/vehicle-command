@@ -179,3 +179,53 @@ func TestSetSeatCoolerSendsHvacSeatCoolerActions(t *testing.T) {
 		t.Errorf("seat_position = %v, want FrontRight", action.GetSeatPosition())
 	}
 }
+
+func TestSetClimateKeeperModeDeliversPublishedAction(t *testing.T) {
+	car, sender := newTestVehicle()
+	sender.Listen(nil)
+	sender.fixedResponse = &universal.RoutableMessage{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := car.SetClimateKeeperMode(ctx, ClimateKeeperModeDog, false); err != nil {
+		if errors.Is(err, protocol.ErrClimateKeeperCPDFirmware) {
+			t.Fatal("SetClimateKeeperMode must still send HvacClimateKeeperAction; cpd_enabled is firmware NominalError, not a client-side refusal")
+		}
+		t.Fatalf("SetClimateKeeperMode: %v", err)
+	}
+	got := climateActionFromLastMessage(t, sender).GetHvacClimateKeeperAction()
+	if got == nil {
+		t.Fatal("request was not HvacClimateKeeperAction")
+	}
+	if got.GetClimateKeeperAction() != ClimateKeeperModeDog {
+		t.Errorf("mode = %v, want Dog", got.GetClimateKeeperAction())
+	}
+	if got.GetManualOverride() {
+		t.Error("manual_override = true, want false")
+	}
+}
+
+func TestSetClimateKeeperModeManualOverrideIsNotCPDBypass(t *testing.T) {
+	car, sender := newTestVehicle()
+	sender.Listen(nil)
+	sender.fixedResponse = &universal.RoutableMessage{}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	if err := car.SetClimateKeeperMode(ctx, ClimateKeeperModeCamp, true); err != nil {
+		if errors.Is(err, protocol.ErrClimateKeeperCPDFirmware) {
+			t.Fatal("manual_override must still be sent as the published low-SOC bit; firmware may still refuse with cpd_enabled")
+		}
+		t.Fatalf("SetClimateKeeperMode: %v", err)
+	}
+	got := climateActionFromLastMessage(t, sender).GetHvacClimateKeeperAction()
+	if got == nil {
+		t.Fatal("request was not HvacClimateKeeperAction")
+	}
+	if got.GetClimateKeeperAction() != ClimateKeeperModeCamp {
+		t.Errorf("mode = %v, want Camp", got.GetClimateKeeperAction())
+	}
+	if !got.GetManualOverride() {
+		t.Error("manual_override = false, want true")
+	}
+}

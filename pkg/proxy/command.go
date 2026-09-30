@@ -88,6 +88,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// In-car SYNC/split is unpublished. Independent temps are set_temps.
 		// teslamotors/vehicle-command#386.
 		return nil, protocol.ErrClimateSplitNotInProtocol
+	case "climate_keeper_cpd", "override_cpd", "dog_mode_cpd", "camp_mode_cpd":
+		// set_climate_keeper_mode is published. Firmware may refuse Dog/Camp
+		// with cpd_enabled. Do not invent a CPD bypass.
+		// teslamotors/vehicle-command#509.
+		return nil, protocol.ErrClimateKeeperCPDFirmware
 	case "keep_awake", "keep_alive":
 		// wake does not inhibit sleep; Tesla has not published a keep-awake
 		// VehicleAction. Do not wrap charge-port-close. teslamotors/vehicle-command#397.
@@ -207,6 +212,8 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		}
 		return func(v *vehicle.Vehicle) error { return v.SetCabinOverheatProtection(ctx, on, fanOnly) }, nil
 	case "set_climate_keeper_mode":
+		// HvacClimateKeeperAction. Firmware may refuse Dog/Camp with
+		// NominalError cpd_enabled. teslamotors/vehicle-command#509.
 		// 0 : off
 		// 1 : On
 		// 2 : Dog

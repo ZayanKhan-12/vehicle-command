@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/teslamotors/vehicle-command/pkg/protocol"
+	"github.com/teslamotors/vehicle-command/pkg/vehicle"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -318,6 +319,67 @@ func TestClimateSplitCommandReturnsProtocolError(t *testing.T) {
 	}
 	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrClimateSplitNotInProtocol) {
 		t.Fatalf("climate-split handler = %v, want ErrClimateSplitNotInProtocol", err)
+	}
+}
+
+func TestClimateKeeperCPDCommandReturnsFirmwareError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["climate-keeper-cpd"]
+	if !ok {
+		t.Fatal("missing climate-keeper-cpd")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("climate-keeper-cpd help command must not require a session")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrClimateKeeperCPDFirmware) {
+		t.Fatalf("climate-keeper-cpd handler = %v, want ErrClimateKeeperCPDFirmware", err)
+	}
+}
+
+func TestClimateKeeperCommandIsPublished(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["climate-keeper"]
+	if !ok {
+		t.Fatal("missing climate-keeper")
+	}
+	if !info.requiresAuth || info.requiresFleetAPI {
+		t.Error("climate-keeper must send a signed Infotainment command")
+	}
+	if len(info.args) != 1 || info.args[0].name != "MODE" {
+		t.Fatal("climate-keeper must take MODE")
+	}
+}
+
+func TestParseClimateKeeperMode(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		in      string
+		want    vehicle.ClimateKeeperMode
+		wantErr bool
+	}{
+		{"dog", vehicle.ClimateKeeperModeDog, false},
+		{"2", vehicle.ClimateKeeperModeDog, false},
+		{"camp", vehicle.ClimateKeeperModeCamp, false},
+		{"3", vehicle.ClimateKeeperModeCamp, false},
+		{"off", vehicle.ClimateKeeperModeOff, false},
+		{"on", vehicle.ClimateKeeperModeOn, false},
+		{"party", 0, true},
+	}
+	for _, tt := range tests {
+		got, err := parseClimateKeeperMode(tt.in)
+		if tt.wantErr {
+			if err == nil {
+				t.Errorf("parseClimateKeeperMode(%q) = %v, want error", tt.in, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("parseClimateKeeperMode(%q): %v", tt.in, err)
+			continue
+		}
+		if got != tt.want {
+			t.Errorf("parseClimateKeeperMode(%q) = %v, want %v", tt.in, got, tt.want)
+		}
 	}
 }
 

@@ -113,6 +113,21 @@ func parseHomelinkDevice(selector string) vehicle.HomelinkDevice {
 	return vehicle.HomelinkByName(selector)
 }
 
+func parseClimateKeeperMode(mode string) (vehicle.ClimateKeeperMode, error) {
+	switch strings.ToLower(strings.TrimSpace(mode)) {
+	case "off", "0":
+		return vehicle.ClimateKeeperModeOff, nil
+	case "on", "1":
+		return vehicle.ClimateKeeperModeOn, nil
+	case "dog", "2":
+		return vehicle.ClimateKeeperModeDog, nil
+	case "camp", "3":
+		return vehicle.ClimateKeeperModeCamp, nil
+	default:
+		return 0, fmt.Errorf("climate keeper mode must be off, on, dog, or camp")
+	}
+}
+
 func GetDays(days string) (int32, error) {
 	var mask int32
 	for _, d := range strings.Split(days, ",") {
@@ -369,6 +384,29 @@ var commands = map[string]*Command{
 		requiresFleetAPI: false,
 		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
 			return protocol.ErrClimateSplitNotInProtocol
+		},
+	},
+	"climate-keeper": {
+		help:             "Set climate keeper MODE (off, on, dog, camp). Firmware may refuse dog/camp with cpd_enabled (Child Presence Detection occupancy, not Child Left Alone Detection). See teslamotors/vehicle-command#509.",
+		requiresAuth:     true,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "MODE", help: "off, on, dog, or camp"},
+		},
+		handler: func(ctx context.Context, _ *account.Account, car *vehicle.Vehicle, args map[string]string) error {
+			mode, err := parseClimateKeeperMode(args["MODE"])
+			if err != nil {
+				return err
+			}
+			return car.SetClimateKeeperMode(ctx, mode, false)
+		},
+	},
+	"climate-keeper-cpd": {
+		help:             "Firmware may refuse Dog/Camp with cpd_enabled. That occupancy radar is not Child Left Alone Detection, and manual_override is not a CPD bypass. See teslamotors/vehicle-command#509.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(ctx context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrClimateKeeperCPDFirmware
 		},
 	},
 	"climate-set-temp": {
