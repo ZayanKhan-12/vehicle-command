@@ -60,3 +60,10 @@ tesla-control lock
 ```
 
 Run `tesla-control -h` to see a full list of supported commands.
+
+`charging-set-amps` sends the same integer over BLE and Fleet API
+([issue #256](https://github.com/teslamotors/vehicle-command/issues/256)).
+The charging UI may show 5A, and a wall meter can read about 1A higher
+while the car is awake. `tesla-control charging-amps-floor` returns
+`ErrChargingAmpsBelowFloorFirmware`. This tool does not clamp the value
+or add an amp on BLE.

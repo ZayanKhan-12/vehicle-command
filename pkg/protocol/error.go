@@ -56,6 +56,19 @@ var (
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.
 	ErrReplayedResponse = errors.New("received vehicle response with duplicate counter")
+	// ErrChargingAmpsBelowFloorFirmware indicates a client asked this SDK to
+	// make BLE and Fleet API charging current match a wall meter, to clamp
+	// SetChargingAmpsAction to 5A, or to add an amp on BLE. charging_amps is
+	// one protobuf field. Both transports send that integer unchanged.
+	// Firmware often shows a 5A floor in the charging UI. An awake car can
+	// draw about 1A from the grid for its low-voltage system, so a wall
+	// meter can read higher than the setpoint. The first set below 5A is
+	// sometimes ignored until the same command is sent again. 0A stops a
+	// UMC and does not stop a TWC gen 2/3. Those are vehicle and charger
+	// behaviors. This library does not rewrite the amp, send the command
+	// twice, or pick a different value per transport. See
+	// teslamotors/vehicle-command#256.
+	ErrChargingAmpsBelowFloorFirmware = NewError("BLE and Fleet API send the same SetChargingAmpsAction integer. Firmware may show a 5A floor, a wall meter can read about 1A high while the car is awake, and the first set below 5A is sometimes ignored. This SDK does not clamp, add an amp on BLE, or send the command twice. See teslamotors/vehicle-command#256", false, false)
 )
 
 type CommandError struct {

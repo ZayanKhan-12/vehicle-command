@@ -151,6 +151,15 @@ application that can send commands over the Internet using a REST API.
 
 ## Using the HTTP proxy
 
+`set_charging_amps` sends the same integer over BLE and Fleet API
+([issue #256](https://github.com/teslamotors/vehicle-command/issues/256)).
+Firmware may show a 5A floor, and a wall meter can read about 1A higher
+while the car is awake. The proxy still sends the requested
+`charging_amps`, including values below 5. It returns HTTP 400
+(`protocol.ErrChargingAmpsBelowFloorFirmware`) for `charging_amps_floor`,
+`ble_charging_amps`, and `match_wall_amps`. This SDK does not clamp the
+value, add an amp on BLE, or send the command twice.
+
 This section describes how to set up and use the HTTP proxy, which allows
 clients to send vehicle commands using a REST API.
 

@@ -232,6 +232,8 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 	case "charge_stop":
 		return func(v *vehicle.Vehicle) error { return v.ChargeStop(ctx) }, nil
 	case "set_charging_amps":
+		// Same SetChargingAmpsAction integer on BLE and Fleet API. Do not
+		// clamp below 5A or add an amp. teslamotors/vehicle-command#256.
 		amps, err := params.getNumber("charging_amps", true)
 		if err != nil {
 			return nil, err
@@ -558,6 +560,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		default:
 			return nil, errors.New("command must be 'vent' or 'close'")
 		}
+	case "charging_amps_floor", "ble_charging_amps", "match_wall_amps":
+		// BLE and Fleet API send the same charging_amps integer. Do not
+		// clamp to 5, add an amp on BLE, or double-send. teslamotors/vehicle-command#256.
+		return nil, protocol.ErrChargingAmpsBelowFloorFirmware
 	default:
 		return nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}
 	}

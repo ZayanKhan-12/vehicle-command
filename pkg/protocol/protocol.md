@@ -139,6 +139,21 @@ See [online
 documentation](https://developer.tesla.com/docs/fleet-api/getting-started/conventions#response-codes)
 for information on other HTTP status codes.
 
+`set_charging_amps` sends `SetChargingAmpsAction.charging_amps`. BLE and
+Fleet API send the same integer. This SDK does not add an amp on BLE, clamp
+the value to 5, or send the command twice.
+[Issue #256](https://github.com/teslamotors/vehicle-command/issues/256)
+reports a Model 3 whose wall meter read about 2A after a 1A BLE setpoint
+while the phone showed 5A, and 1A after the same Fleet API setpoint.
+Firmware may show a 5A floor. An awake car can draw about 200–300W from
+the grid, about 1A on a single-phase supply. The first set below 5A is
+sometimes ignored until the same command is repeated. `0` stops a UMC and
+does not stop a TWC gen 2/3. Callers that ask this SDK to rewrite the amp
+get [`protocol.ErrChargingAmpsBelowFloorFirmware`](error.go) from
+`tesla-control charging-amps-floor` and proxy paths `charging_amps_floor`,
+`ble_charging_amps`, and `match_wall_amps`. The requested integer is still
+sent.
+
 Although communication between clients and Tesla's servers use TLS/TCP, the
 communication channel between Tesla's servers and vehicles does not provide TCP
 transport guarantees; **messages may be dropped or arrive out of order**.

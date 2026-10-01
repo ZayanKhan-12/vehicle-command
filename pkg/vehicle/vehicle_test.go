@@ -44,6 +44,8 @@ type testSender struct {
 	errQueue  []error
 
 	ConnectionErrors []error
+
+	lastMessage *universal.RoutableMessage
 }
 
 func (s *testSender) StartSessions(_ context.Context, _ []universal.Domain) error {
@@ -128,9 +130,10 @@ func (s *testSender) Stop() {
 	s.lock.Unlock()
 }
 
-func (s *testSender) Send(_ context.Context, _ *universal.RoutableMessage, _ connector.AuthMethod) (protocol.Receiver, error) {
+func (s *testSender) Send(_ context.Context, message *universal.RoutableMessage, _ connector.AuthMethod) (protocol.Receiver, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	s.lastMessage = message
 	if s.SendError != nil {
 		return nil, s.SendError
 	}
