@@ -56,6 +56,19 @@ var (
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.
 	ErrReplayedResponse = errors.New("received vehicle response with duplicate counter")
+	// ErrInfotainmentSignedCommandOffline indicates a client asked this SDK
+	// to treat GET /api/1/vehicles state=online, or a successful
+	// DOMAIN_VEHICLE_SECURITY signed_command, as proof DOMAIN_INFOTAINMENT
+	// will accept the next session_info_request. Both domains are posted to
+	// the same signed_command endpoint; the domain is inside the protobuf.
+	// Tesla's gateway can still return HTTP 408 "vehicle is offline"
+	// (inet.ErrVehicleNotAwake) for Infotainment while the vehicle list says
+	// online, VCSEC commands succeed, BLE reaches both domains, and the
+	// operator is in the car, reported on fleet-api.prd.cn
+	// (teslamotors/vehicle-command#285). wake_up is unsigned REST and does
+	// not guarantee the next Infotainment handshake. This library does not
+	// rewrite the domain to VCSEC or skip the Infotainment handshake.
+	ErrInfotainmentSignedCommandOffline = NewError("GET /api/1/vehicles state=online and a successful VCSEC signed_command do not mean DOMAIN_INFOTAINMENT signed_command will succeed. Tesla's gateway can return HTTP 408 vehicle is offline for Infotainment (reported on fleet-api.prd.cn while the car is occupied and BLE works for both domains). This SDK does not rewrite the domain or skip the Infotainment handshake. See teslamotors/vehicle-command#285", false, false)
 )
 
 type CommandError struct {

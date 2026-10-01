@@ -558,6 +558,11 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		default:
 			return nil, errors.New("command must be 'vent' or 'close'")
 		}
+	case "infotainment_offline", "domain_infotainment_online", "vcsec_means_infotainment_online":
+		// state=online and a VCSEC signed_command do not prove
+		// DOMAIN_INFOTAINMENT will be accepted. Do not rewrite the domain
+		// or skip that handshake. teslamotors/vehicle-command#285.
+		return nil, protocol.ErrInfotainmentSignedCommandOffline
 	default:
 		return nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}
 	}

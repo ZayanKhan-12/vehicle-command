@@ -151,6 +151,14 @@ application that can send commands over the Internet using a REST API.
 
 ## Using the HTTP proxy
 
+`GET /api/1/vehicles` `state=online` is not Infotainment reachability
+([issue #285](https://github.com/teslamotors/vehicle-command/issues/285)).
+A VCSEC `signed_command` can succeed while Tesla returns HTTP 408
+`vehicle is offline` for `DOMAIN_INFOTAINMENT`. The proxy still sends
+published Infotainment commands such as `honk_horn`. It returns HTTP 400
+(`protocol.ErrInfotainmentSignedCommandOffline`) for `infotainment_offline`,
+`domain_infotainment_online`, and `vcsec_means_infotainment_online`.
+
 This section describes how to set up and use the HTTP proxy, which allows
 clients to send vehicle commands using a REST API.
 

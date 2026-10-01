@@ -523,6 +523,14 @@ var commands = map[string]*Command{
 			return car.HonkHorn(ctx)
 		},
 	},
+	"infotainment-offline": {
+		help:             "GET /vehicles state=online and a VCSEC signed_command do not mean DOMAIN_INFOTAINMENT will be accepted. Tesla may return HTTP 408 vehicle is offline. See teslamotors/vehicle-command#285.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		handler: func(_ context.Context, _ *account.Account, _ *vehicle.Vehicle, _ map[string]string) error {
+			return protocol.ErrInfotainmentSignedCommandOffline
+		},
+	},
 	"ping": {
 		help:             "Ping vehicle",
 		requiresAuth:     true,

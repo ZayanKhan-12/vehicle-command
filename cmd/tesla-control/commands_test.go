@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -60,5 +63,19 @@ func TestGetDays(t *testing.T) {
 		} else if mask != test.mask {
 			t.Errorf("day string '%s' gave mask %s instead of %s", test.str, strconv.FormatInt(int64(mask), 2), strconv.FormatInt(int64(test.mask), 2))
 		}
+	}
+}
+
+func TestInfotainmentOfflineCommandReturnsProtocolError(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["infotainment-offline"]
+	if !ok {
+		t.Fatal("missing infotainment-offline")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("infotainment-offline help command must not require a session")
+	}
+	if err := info.handler(context.Background(), nil, nil, nil); !errors.Is(err, protocol.ErrInfotainmentSignedCommandOffline) {
+		t.Fatalf("infotainment-offline handler = %v, want ErrInfotainmentSignedCommandOffline", err)
 	}
 }

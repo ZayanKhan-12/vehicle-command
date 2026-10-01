@@ -139,6 +139,22 @@ See [online
 documentation](https://developer.tesla.com/docs/fleet-api/getting-started/conventions#response-codes)
 for information on other HTTP status codes.
 
+`GET /api/1/vehicles/{vin}` with `state=online` is the vehicle-list state. It
+does not mean Tesla's command gateway will accept a `RoutableMessage`
+addressed to `DOMAIN_INFOTAINMENT`. A successful
+`DOMAIN_VEHICLE_SECURITY` `signed_command` does not prove the next
+Infotainment `session_info_request` will be accepted. BLE is a different
+transport. [Issue #285](https://github.com/teslamotors/vehicle-command/issues/285)
+reports HTTP 408 `vehicle is offline` for Infotainment while the list says
+online, VCSEC commands succeed, the operator is in the car, and the host is
+`fleet-api.prd.cn.vn.cloud.tesla.cn`. That 408 is the gateway. This SDK does
+not rewrite the domain or skip the Infotainment handshake. Callers that ask
+it to treat `state=online` or a VCSEC success as Infotainment reachability
+get [`protocol.ErrInfotainmentSignedCommandOffline`](error.go) from
+`tesla-control infotainment-offline` and proxy paths `infotainment_offline`,
+`domain_infotainment_online`, and `vcsec_means_infotainment_online`.
+Published Infotainment commands such as `honk_horn` are still sent.
+
 Although communication between clients and Tesla's servers use TLS/TCP, the
 communication channel between Tesla's servers and vehicles does not provide TCP
 transport guarantees; **messages may be dropped or arrive out of order**.

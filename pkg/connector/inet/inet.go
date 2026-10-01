@@ -41,6 +41,10 @@ func ReadWithContext(ctx context.Context, r io.Reader, p []byte) ([]byte, error)
 	}
 }
 
+// ErrVehicleNotAwake is Tesla Fleet API HTTP 503, or HTTP 408 whose body
+// contains "vehicle is offline". GET /api/1/vehicles state=online does not
+// mean an Infotainment signed_command will be accepted; a 408 on that domain
+// stays this error (teslamotors/vehicle-command#285).
 var ErrVehicleNotAwake = protocol.NewError("vehicle unavailable: vehicle is offline or asleep", false, false)
 
 /*

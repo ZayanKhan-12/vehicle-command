@@ -60,3 +60,12 @@ tesla-control lock
 ```
 
 Run `tesla-control -h` to see a full list of supported commands.
+
+`GET /api/1/vehicles` `state=online` and a successful VCSEC command do not
+mean `DOMAIN_INFOTAINMENT` `signed_command` will be accepted. Tesla can
+return HTTP 408 `vehicle is offline` for Infotainment while the operator is
+in the car and BLE reaches both domains
+([issue #285](https://github.com/teslamotors/vehicle-command/issues/285)).
+`tesla-control infotainment-offline` returns
+`ErrInfotainmentSignedCommandOffline`. This tool does not retarget the
+message to VCSEC.
