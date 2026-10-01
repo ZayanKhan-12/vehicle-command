@@ -2,6 +2,7 @@ package inet
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -26,8 +27,33 @@ func TestSendAfterClose(t *testing.T) {
 	}
 }
 
-// TestWithClient checks that WithClient replaces the client the Connection
-// sends with, and that the default is left alone when no option is passed.
+func TestVehicleNotAwakeFromTeslaGateway(t *testing.T) {
+	tests := []struct {
+		name   string
+		status int
+		body   string
+	}{
+		{"service unavailable", http.StatusServiceUnavailable, `{"error":"vehicle unavailable: vehicle is offline or asleep"}`},
+		{"request timeout offline", http.StatusRequestTimeout, `{"error":"vehicle is offline"}`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(tt.status)
+				_, _ = w.Write([]byte(tt.body))
+			}))
+			defer server.Close()
+			_, err := SendFleetAPICommand(context.Background(), server.Client(), "test", "Bearer x", server.URL+"/api/1/vehicles/VIN/signed_command", []byte("{}"))
+			if !errors.Is(err, ErrVehicleNotAwake) {
+				t.Fatalf("err = %v, want ErrVehicleNotAwake", err)
+			}
+			if protocol.ShouldRetry(err) || protocol.Temporary(err) {
+				t.Fatal("ErrVehicleNotAwake must not trigger Vehicle.Send retries; callers wake then retry at the application layer")
+			}
+		})
+	}
+}
+
 func TestWithClient(t *testing.T) {
 	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Write([]byte(`{"response": ""}`))

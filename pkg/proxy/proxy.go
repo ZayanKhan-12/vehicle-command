@@ -28,7 +28,7 @@ import (
 
 const (
 	DefaultTimeout       = 10 * time.Second
-	maxRequestBodyBytes  = 512
+	maxRequestBodyBytes  = 1 << 20
 	vinLength            = 17
 	proxyProtocolVersion = "tesla-http-proxy/1.1.0"
 	MaxResponseLength    = 10000000
@@ -176,11 +176,33 @@ type carResponse struct {
 	Reason string `json:"reason"`
 }
 
+// httpStatusCode maps errors to the HTTP status codes Fleet API uses for the
+// equivalent failures, defaulting to 500 for unrecognized errors.
+func httpStatusCode(err error) int {
+	switch {
+	case errors.Is(err, inet.ErrVehicleNotAwake):
+		// Fleet API returns 408 when the vehicle is offline or asleep.
+		return http.StatusRequestTimeout
+	case errors.Is(err, protocol.ErrKeyNotPaired):
+		// Not 401: the OAuth token was accepted, but the vehicle-side key
+		// pairing precondition failed.
+		return http.StatusPreconditionFailed
+	default:
+		return http.StatusInternalServerError
+	}
+}
+
 func writeJSONError(w http.ResponseWriter, code int, err error) {
 	reply := Response{}
 
 	var httpErr *inet.HTTPError
 	var jsonBytes []byte
+	// inet.HTTPError keeps Tesla's status and body. tesla-http-proxy therefore
+	// forwards Tesla signed_command HTTP 501 as "Not Implemented" even when
+	// ExtractCommandAction already mapped the REST path (for example
+	// remote_seat_heater_request). JSON error "Unauthorized" is Tesla Fleet
+	// API partner/region/OAuth allowlist, not ErrCommandNotImplemented.
+	// See teslamotors/vehicle-command#383.
 	if errors.As(err, &httpErr) {
 		code = httpErr.Code
 		jsonBytes = []byte(err.Error())
@@ -220,7 +242,7 @@ var connectionHeaders = []string{
 // forwardRequest is the fallback handler for "/api/1/*".
 // It forwards GET and POST requests to Tesla using the proxy's OAuth token.
 func (p *Proxy) forwardRequest(acct *account.Account, w http.ResponseWriter, req *http.Request) {
-	ctx, cancel := context.WithTimeout(context.Background(), p.Timeout)
+	ctx, cancel := context.WithTimeout(req.Context(), p.Timeout)
 	defer cancel()
 
 	proxyReq, err := http.NewRequestWithContext(ctx, req.Method, req.URL.String(), req.Body)
@@ -256,6 +278,11 @@ func (p *Proxy) forwardRequest(acct *account.Account, w http.ResponseWriter, req
 	if req.Body != nil {
 		requestBody, err = io.ReadAll(req.Body)
 		if err != nil {
+			var maxBytesErr *http.MaxBytesError
+			if errors.As(err, &maxBytesErr) {
+				writeJSONError(w, http.StatusRequestEntityTooLarge, err)
+				return
+			}
 			writeJSONError(w, http.StatusBadGateway, err)
 			return
 		}
@@ -339,6 +366,8 @@ func (p *Proxy) forwardRequest(acct *account.Account, w http.ResponseWriter, req
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	log.Info("Received %s request for %s", req.Method, req.URL.Path)
 
+	req.Body = http.MaxBytesReader(w, req.Body, maxRequestBodyBytes)
+
 	if req.URL.Path == "/health" {
 		p.handleHealthCheck(w, req)
 		return
@@ -398,6 +427,11 @@ func (p *Proxy) handleFleetTelemetryConfig(acct *account.Account, w http.Respons
 	}()
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeJSONError(w, http.StatusRequestEntityTooLarge, err)
+			return
+		}
 		writeJSONError(w, http.StatusBadRequest, fmt.Errorf("could not read request body: %s", err))
 		return
 	}
@@ -443,7 +477,7 @@ func (p *Proxy) handleFleetTelemetryConfig(acct *account.Account, w http.Respons
 }
 
 func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWriter, req *http.Request, command, vin string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), p.Timeout)
+	ctx, cancel := context.WithTimeout(req.Context(), p.Timeout)
 	defer cancel()
 
 	// Serialize commands sent to a specific VIN to avoid some complexities associated with sharing
@@ -460,7 +494,10 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 	}
 
 	if err := car.Connect(ctx); err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err)
+		// Connect starts the dispatcher listener. Stop it even when Start returns
+		// ctx.Err() before this function would otherwise defer Disconnect.
+		car.Disconnect()
+		writeJSONError(w, httpStatusCode(err), err)
 		return err
 	}
 	defer car.Disconnect()
@@ -483,7 +520,7 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 			p.forwardRequest(acct, w, req)
 			return err
 		} else if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, err)
+			writeJSONError(w, httpStatusCode(err), err)
 			return err
 		}
 		defer func() {
@@ -499,7 +536,7 @@ func (p *Proxy) handleVehicleCommand(acct *account.Account, w http.ResponseWrite
 		return err
 	}
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err)
+		writeJSONError(w, httpStatusCode(err), err)
 		return err
 	}
 
@@ -549,6 +586,10 @@ func extractCommandAction(ctx context.Context, req *http.Request, command string
 	var params RequestParameters
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			return nil, &inet.HTTPError{Code: http.StatusRequestEntityTooLarge, Message: err.Error()}
+		}
 		return nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "could not read request body"}
 	}
 	// Restore the body so fallbacks that forward the request (REST API / unsupported protocol)
