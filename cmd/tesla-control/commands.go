@@ -401,6 +401,34 @@ var commands = map[string]*Command{
 			return car.SetClimateKeeperMode(ctx, mode, false)
 		},
 	},
+	"virtual-key-link": {
+		help:             "Print Tesla's hosted virtual-key enrollment link for DOMAIN (https://tesla.com/_ak/DOMAIN). No return_uri. See teslamotors/vehicle-command#444.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "DOMAIN", help: "Registered partner hostname, such as example.com"},
+		},
+		handler: func(_ context.Context, _ *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			link, err := account.VirtualKeyInstallURL(args["DOMAIN"])
+			if err != nil {
+				return err
+			}
+			fmt.Println(link)
+			return nil
+		},
+	},
+	"virtual-key-return": {
+		help:             "Tesla hosts the Finish Setup button. This SDK does not append return_uri. Off-domain redirects are rejected. See teslamotors/vehicle-command#444.",
+		requiresAuth:     false,
+		requiresFleetAPI: false,
+		args: []Argument{
+			{name: "DOMAIN", help: "Registered partner hostname"},
+			{name: "RETURN_URI", help: "https URL on that domain; not sent"},
+		},
+		handler: func(_ context.Context, _ *account.Account, _ *vehicle.Vehicle, args map[string]string) error {
+			return account.RejectVirtualKeyReturnURI(args["DOMAIN"], args["RETURN_URI"])
+		},
+	},
 	"climate-keeper-cpd": {
 		help:             "Firmware may refuse Dog/Camp with cpd_enabled. That occupancy radar is not Child Left Alone Detection, and manual_override is not a CPD bypass. See teslamotors/vehicle-command#509.",
 		requiresAuth:     false,

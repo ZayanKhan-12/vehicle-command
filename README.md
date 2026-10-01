@@ -225,9 +225,21 @@ in the above example.
 Once your public key is successfully registered, provide vehicle owners with a
 link to `https://tesla.com/_ak/<your_domain_name>`. For example, if you
 registered `example.com`, provide a link to
-`https://tesla.com/_ak/example.com`. The official Tesla iPhone or Android mobile app (version 4.27.3 or above)
+`https://tesla.com/_ak/example.com`. `account.VirtualKeyInstallURL` builds
+that link and does not add a query string. The official Tesla iPhone or Android mobile app (version 4.27.3 or above)
 will handle the rest. Customers with more than one Tesla product must select the desired vehicle before clicking
 the link or scanning the QR code.
+
+The Finish Setup button on that page is rendered by Tesla
+([issue #444](https://github.com/teslamotors/vehicle-command/issues/444)).
+On a desktop browser it can load the same page again. This SDK cannot
+change the button. An unconstrained `return_uri` would be an open
+redirect. A Tesla collaborator said any redirect must stay on the
+registered partner domain and/or be configured with Tesla in advance.
+`account.RejectVirtualKeyReturnURI` returns
+`protocol.ErrVirtualKeyReturnURI` and does not append the parameter.
+`account.VirtualKeyReturnHostAllowed` only reports whether a URL's host
+is that domain or a subdomain.
 
 ### Generating a server TLS key and certificate
 
