@@ -222,6 +222,29 @@ domain](https://developer.tesla.com/docs/fleet-api/endpoints/partner-endpoints#r
 The public key referred to in those instructions is the `public_key.pem` file
 in the above example.
 
+You must also **host that same public key** on your domain, at this exact path:
+
+```
+https://<your_domain_name>/.well-known/appspecific/com.tesla.3p.public-key.pem
+```
+
+Tesla fetches it over HTTPS on port 443. Vehicles only accept `prime256v1`
+(also called P-256 or `secp256r1`) keys, which is what `tesla-keygen` produces.
+
+If the file is missing, served on a non-standard port, or holds a key of the
+wrong type, enrollment fails inside the Tesla mobile app, which does not say
+which of those it was. Check the setup before handing the link to customers:
+
+```bash
+tesla-key-check -public-key public_key.pem example.com
+```
+
+It reports each requirement separately and exits non-zero if any fails. It
+prints the TLS leaf issuer for diagnosis but cannot tell whether that issuer
+is on Tesla's private dashboard CA allowlist, and it cannot check registration
+with the partner endpoint. A green result does not mean the developer
+dashboard will accept the domain as an Allowed Origin.
+
 Once your public key is successfully registered, provide vehicle owners with a
 link to `https://tesla.com/_ak/<your_domain_name>`. For example, if you
 registered `example.com`, provide a link to
@@ -240,6 +263,21 @@ registered partner domain and/or be configured with Tesla in advance.
 `protocol.ErrVirtualKeyReturnURI` and does not append the parameter.
 `account.VirtualKeyReturnHostAllowed` only reports whether a URL's host
 is that domain or a subdomain.
+
+Keys enrolled through this cloud (`_ak`) flow are installed as **Fleet Manager**
+keys. On vehicles running firmware 2023.38 or later, Fleet Manager keys can
+authorize commands over the Fleet API but **cannot authorize commands over
+BLE**. Attempts to use such a key over BLE typically fail with
+`MESSAGEFAULT_ERROR_INSUFFICIENT_PRIVILEGES`. This is vehicle policy, not an
+SDK bug; see the [Fleet Manager role
+description](pkg/protocol/protocol.md#roles) in the protocol documentation.
+
+If your application also needs local BLE control, pair a separate key over BLE
+(for example with `tesla-control -ble add-key-request ... owner cloud_key` and
+an NFC confirmation). That path enrolls an Owner (or other explicitly chosen)
+role that is allowed to send BLE commands. The `cloud_key` argument there is
+only a key form-factor label — it is not the same as `_ak` Fleet Manager
+enrollment.
 
 ### Generating a server TLS key and certificate
 

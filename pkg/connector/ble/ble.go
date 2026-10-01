@@ -22,7 +22,14 @@ const (
 )
 
 var ErrAdapterInvalidID = protocol.NewError("the bluetooth adapter ID is invalid", false, false)
-var ErrMaxConnectionsExceeded = protocol.NewError("the vehicle is already connected to the maximum number of BLE devices", false, false)
+
+// ErrMaxConnectionsExceeded is returned when the vehicle's BLE advertisement
+// marks the peripheral as non-connectable. That is VCSEC's signal that its
+// hardware connection slots are full: the controller reliably maintains at
+// most three simultaneous BLE links, shared with phone keys, keyfobs and other
+// clients (see pkg/protocol/protocol.md). This repository cannot raise that
+// limit; only vehicle firmware / hardware can.
+var ErrMaxConnectionsExceeded = protocol.NewError("the vehicle is already connected to the maximum number of BLE devices (VCSEC hardware limit: three simultaneous connections, shared with phone keys and keyfobs)", false, false)
 
 var (
 	rxTimeout  = time.Second     // Timeout interval between receiving chunks of a mesasge

@@ -784,6 +784,61 @@ func TestVehicleCommandSuccess(t *testing.T) {
 	}
 }
 
+// TestWakeUpSkipsStartSession pins the #468 carve-out: /command/wake_up must
+// not require a signed dual-domain handshake. When the car is asleep that
+// handshake is what fails; the wake is what recovers it. A session failure
+// must therefore not block Execute.
+func TestWakeUpSkipsStartSession(t *testing.T) {
+	p := newTestProxy(t)
+	mock := &mockVehicle{sessionErr: errors.New("infotainment offline")}
+	p.fetchVehicle = func(context.Context, *account.Account, string) (vehicleSession, error) {
+		return mock, nil
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/1/vehicles/"+testVIN+"/command/wake_up", nil)
+	req.Header.Set("Authorization", authHeader())
+	p.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if mock.sessionOK {
+		t.Fatal("StartSession should not have been called for wake_up")
+	}
+	if !mock.connected || mock.executeCalls != 1 || !mock.disconnected {
+		t.Fatalf("mock state: %+v", mock)
+	}
+	if mock.updatedCache {
+		t.Fatal("session cache should not update when StartSession was skipped")
+	}
+}
+
+// TestDoorLockStillRequiresStartSession is the counterweight: ordinary
+// commands keep today's dual-domain handshake. #468 proposed skipping
+// Infotainment for VCSEC-only commands over inet; a collaborator noted that
+// internet VCSEC traffic is forwarded by Infotainment, so that narrowing is
+// not landed here.
+func TestDoorLockStillRequiresStartSession(t *testing.T) {
+	p := newTestProxy(t)
+	mock := &mockVehicle{sessionErr: errors.New("infotainment offline")}
+	p.fetchVehicle = func(context.Context, *account.Account, string) (vehicleSession, error) {
+		return mock, nil
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/1/vehicles/"+testVIN+"/command/door_lock", nil)
+	req.Header.Set("Authorization", authHeader())
+	p.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status=%d body=%s, want handshake failure", rec.Code, rec.Body.String())
+	}
+	if mock.executeCalls != 0 {
+		t.Fatalf("Execute ran %d times despite StartSession failure", mock.executeCalls)
+	}
+}
+
 func TestVehicleCommandMethodNotAllowed(t *testing.T) {
 	p := newTestProxy(t)
 	p.fetchVehicle = func(context.Context, *account.Account, string) (vehicleSession, error) {

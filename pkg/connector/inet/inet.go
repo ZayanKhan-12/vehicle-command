@@ -106,7 +106,11 @@ func SendFleetAPICommand(ctx context.Context, client *http.Client, userAgent, au
 
 	request.Header.Set("User-Agent", userAgent)
 	request.Header.Set("Content-type", "application/json")
-	request.Header.Set("Authorization", authHeader)
+	// An empty header means the caller arranged for the client's Transport to
+	// supply the Authorization header, as an oauth2.Transport does.
+	if authHeader != "" {
+		request.Header.Set("Authorization", authHeader)
+	}
 	request.Header.Set("Accept", "*/*")
 
 	result, err := client.Do(request)
@@ -159,6 +163,9 @@ func (c *Connection) SendFleetAPICommand(ctx context.Context, endpoint string, c
 			if len(matches) == 2 && ValidTeslaDomainSuffix(matches[1]) {
 				log.Debug("Received HTTP Status 421. Updating server URL.")
 				c.serverURL = matches[1]
+				if c.onRegionChange != nil {
+					c.onRegionChange(matches[1])
+				}
 			}
 		}
 	}
@@ -174,12 +181,53 @@ type Connection struct {
 	inbox      chan []byte
 	authHeader string
 
+	onRegionChange func(host string)
+
 	lock     sync.Mutex
 	lastPoke time.Time
 }
 
+// A ConnectionOption modifies a Connection returned by [NewConnection].
+type ConnectionOption func(*Connection)
+
+// WithClient makes the Connection send its requests with client instead of with
+// a default [http.Client].
+//
+// This is the hook for behavior that lives in the transport: an
+// [http.RoundTripper] that logs or instruments requests, a proxy, a custom TLS
+// configuration, or a client-wide timeout. Previously the only way to influence
+// any of that was to modify [http.DefaultClient], which is not an option for a
+// program that also makes unrelated HTTP requests.
+//
+// The Connection keeps a reference to client rather than a copy of it, so do
+// not modify client after passing it here. A nil client leaves the default in
+// place.
+func WithClient(client *http.Client) ConnectionOption {
+	return func(c *Connection) {
+		if client != nil {
+			c.client = client
+		}
+	}
+}
+
+// WithRegionHandler registers f to be called when the Fleet API answers a request
+// with HTTP 421 and names the regional server that should have been used.
+//
+// The Connection redirects itself either way; the handler exists so that
+// whoever created it can record the correction too. Without it the knowledge
+// dies with the Connection, and the next request starts by being misrouted
+// again. See [github.com/teslamotors/vehicle-command/pkg/account.Account.GetVehicle].
+//
+// f is called from the goroutine that made the request, before that request
+// returns.
+func WithRegionHandler(f func(host string)) ConnectionOption {
+	return func(c *Connection) {
+		c.onRegionChange = f
+	}
+}
+
 // NewConnection creates a Connection.
-func NewConnection(vin string, authHeader, serverURL, userAgent string) *Connection {
+func NewConnection(vin string, authHeader, serverURL, userAgent string, options ...ConnectionOption) *Connection {
 	conn := Connection{
 		UserAgent:  userAgent,
 		vin:        vin,
@@ -187,6 +235,9 @@ func NewConnection(vin string, authHeader, serverURL, userAgent string) *Connect
 		serverURL:  serverURL,
 		authHeader: authHeader,
 		inbox:      make(chan []byte, connector.BufferSize),
+	}
+	for _, option := range options {
+		option(&conn)
 	}
 	return &conn
 }

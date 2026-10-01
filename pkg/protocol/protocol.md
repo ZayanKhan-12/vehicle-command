@@ -161,7 +161,11 @@ Messages sent or received over BLE are preceded by the two-byte big-endian
 encoding of the message length.
 
 *Note*: Due to hardware constraints, VCSEC can only reliably maintain up to
-three simultaneous BLE connections. These are shared by keyfobs and phone keys.
+three simultaneous BLE connections. These are shared by keyfobs, phone keys,
+and third-party clients that speak this protocol. The limit is on the vehicle;
+this SDK cannot raise it. When every slot is taken the vehicle advertises as
+non-connectable and `pkg/connector/ble` returns `ErrMaxConnectionsExceeded`.
+See issue #469.
 
 ### BLE keys and Walk-Away Door Lock
 
