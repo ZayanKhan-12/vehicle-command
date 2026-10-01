@@ -88,6 +88,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		// In-car SYNC/split is unpublished. Independent temps are set_temps.
 		// teslamotors/vehicle-command#386.
 		return nil, protocol.ErrClimateSplitNotInProtocol
+	case "virtual_key_return", "ak_return_uri", "set_virtual_key_return":
+		// https://tesla.com/_ak/<domain> is Tesla's hosted page. An
+		// unconstrained return_uri is an open redirect. teslamotors/vehicle-command#444.
+		return nil, protocol.ErrVirtualKeyReturnURI
 	case "climate_keeper_cpd", "override_cpd", "dog_mode_cpd", "camp_mode_cpd":
 		// set_climate_keeper_mode is published. Firmware may refuse Dog/Camp
 		// with cpd_enabled. Do not invent a CPD bypass.

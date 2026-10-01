@@ -212,8 +212,18 @@ var (
 	// published action so a future firmware grant works without an SDK
 	// change. See teslamotors/vehicle-command#509.
 	ErrClimateKeeperCPDFirmware = NewError("set_climate_keeper_mode is published (HvacClimateKeeperAction Dog/Camp). Firmware may refuse with cpd_enabled (Child Presence Detection occupancy), which is not the Child Left Alone Detection setting. manual_override is a low-SOC override, not a CPD bypass. This SDK does not invent a CPD-disable action. See teslamotors/vehicle-command#509", false, false)
-	ErrRequiresEncryption       = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext      = errors.New("could not decrypt vehicle response without a session")
+	// ErrVirtualKeyReturnURI indicates a client asked this SDK to change the
+	// Finish Setup button on Tesla's hosted virtual-key page
+	// (https://tesla.com/_ak/<domain>) or to append an arbitrary return_uri.
+	// That page is Tesla's website, not this repository. An unconstrained
+	// return URL is an open redirect. A Tesla collaborator said any redirect
+	// must stay on the registered partner domain and/or be configured in
+	// advance (teslamotors/vehicle-command#444). This SDK builds the
+	// enrollment link without a query string and does not host a substitute
+	// page.
+	ErrVirtualKeyReturnURI = NewError("the virtual key Finish Setup button is on Tesla's hosted https://tesla.com/_ak/<domain> page, not in this SDK. An unconstrained return_uri is an open redirect; any redirect must stay on the registered partner domain and be configured with Tesla in advance. This SDK does not append return_uri. See teslamotors/vehicle-command#444", false, false)
+	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

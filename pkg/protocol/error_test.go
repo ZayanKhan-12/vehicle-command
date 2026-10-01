@@ -378,6 +378,19 @@ func TestErrClimateKeeperCPDFirmware(t *testing.T) {
 	}
 }
 
+func TestErrVirtualKeyReturnURI(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrVirtualKeyReturnURI) || MayHaveSucceeded(ErrVirtualKeyReturnURI) || ShouldRetry(ErrVirtualKeyReturnURI) {
+		t.Fatal("virtual key return_uri must not retry in Vehicle.Send")
+	}
+	if !errors.Is(fmt.Errorf("finish setup: %w", ErrVirtualKeyReturnURI), ErrVirtualKeyReturnURI) {
+		t.Fatal("callers must be able to errors.Is ErrVirtualKeyReturnURI")
+	}
+	if !strings.Contains(ErrVirtualKeyReturnURI.Error(), "#444") {
+		t.Fatal("error must cite teslamotors/vehicle-command#444")
+	}
+}
+
 func TestIsClimateKeeperCPDEnabled(t *testing.T) {
 	t.Parallel()
 	nominal := &NominalError{Details: NewError("car could not execute command: cpd_enabled", false, false)}

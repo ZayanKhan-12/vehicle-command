@@ -322,6 +322,48 @@ func TestClimateSplitCommandReturnsProtocolError(t *testing.T) {
 	}
 }
 
+func TestVirtualKeyReturnCommandRejectsRedirect(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["virtual-key-return"]
+	if !ok {
+		t.Fatal("missing virtual-key-return")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("virtual-key-return must not require a session")
+	}
+	err := info.handler(context.Background(), nil, nil, map[string]string{
+		"DOMAIN":     "example.com",
+		"RETURN_URI": "https://evil.test/phish",
+	})
+	if !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("virtual-key-return = %v, want ErrVirtualKeyReturnURI", err)
+	}
+	err = info.handler(context.Background(), nil, nil, map[string]string{
+		"DOMAIN":     "example.com",
+		"RETURN_URI": "https://example.com/finish-setup",
+	})
+	if !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("same-domain return_uri = %v, want ErrVirtualKeyReturnURI", err)
+	}
+}
+
+func TestVirtualKeyLinkCommandPrintsHostedURL(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["virtual-key-link"]
+	if !ok {
+		t.Fatal("missing virtual-key-link")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("virtual-key-link must not require a session")
+	}
+	if err := info.handler(context.Background(), nil, nil, map[string]string{"DOMAIN": "example.com"}); err != nil {
+		t.Fatalf("virtual-key-link: %v", err)
+	}
+	if err := info.handler(context.Background(), nil, nil, map[string]string{"DOMAIN": "https://evil.test"}); !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("virtual-key-link bad domain = %v", err)
+	}
+}
+
 func TestClimateKeeperCPDCommandReturnsFirmwareError(t *testing.T) {
 	t.Parallel()
 	info, ok := commands["climate-keeper-cpd"]

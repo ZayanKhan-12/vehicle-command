@@ -156,6 +156,13 @@ This tool cannot mint a partner token, bind audiences, or
 `tesla-control partner-oauth` returns
 `ErrPartnerOAuthNotProvisioned`.
 
+`tesla-control virtual-key-link example.com` prints
+`https://tesla.com/_ak/example.com` with no query string
+([issue #444](https://github.com/teslamotors/vehicle-command/issues/444)).
+The Finish Setup button on that page is Tesla's. `virtual-key-return`
+returns `ErrVirtualKeyReturnURI` and does not append `return_uri`.
+An off-domain return URL is an open redirect.
+
 ## Sending commands
 
 You should now be able to send commands over BLE:

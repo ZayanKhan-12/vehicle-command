@@ -150,6 +150,13 @@ make proto-gen   # requires protoc + protoc-gen-go
   `passenger_temp_setting`; do not invent an `is_climate_split` field
   or unused oneof. Return `protocol.ErrClimateSplitNotInProtocol`. See
   teslamotors/vehicle-command#386.
+* `https://tesla.com/_ak/<domain>` is Tesla's hosted virtual-key page.
+  The Finish Setup button is not in this SDK. Do not append an
+  unconstrained `return_uri` (open redirect). A redirect would have to
+  stay on the registered partner domain and be configured with Tesla.
+  `account.VirtualKeyInstallURL` builds the link with no query string.
+  Return `protocol.ErrVirtualKeyReturnURI` when a caller asks to set
+  `return_uri`. See teslamotors/vehicle-command#444.
 * `set_climate_keeper_mode` (Dog=2, Camp=3) is published
   `HvacClimateKeeperAction`. Firmware may refuse with NominalError
   `cpd_enabled` (Child Presence Detection occupancy radar). That is not
