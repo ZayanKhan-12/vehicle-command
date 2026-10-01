@@ -60,3 +60,10 @@ tesla-control lock
 ```
 
 Run `tesla-control -h` to see a full list of supported commands.
+
+`tesla-control virtual-key-link example.com` prints
+`https://tesla.com/_ak/example.com` with no query string
+([issue #444](https://github.com/teslamotors/vehicle-command/issues/444)).
+The Finish Setup button on that page is Tesla's. `virtual-key-return`
+returns `ErrVirtualKeyReturnURI` and does not append `return_uri`.
+An off-domain return URL is an open redirect.

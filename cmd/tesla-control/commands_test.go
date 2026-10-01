@@ -1,9 +1,12 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"testing"
+
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 )
 
 func TestMinutesAfterMidnight(t *testing.T) {
@@ -60,5 +63,44 @@ func TestGetDays(t *testing.T) {
 		} else if mask != test.mask {
 			t.Errorf("day string '%s' gave mask %s instead of %s", test.str, strconv.FormatInt(int64(mask), 2), strconv.FormatInt(int64(test.mask), 2))
 		}
+	}
+}
+
+func TestVirtualKeyReturnCommandRejectsRedirect(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["virtual-key-return"]
+	if !ok {
+		t.Fatal("missing virtual-key-return")
+	}
+	if info.requiresFleetAPI || info.requiresAuth {
+		t.Error("virtual-key-return must not require a session")
+	}
+	err := info.handler(context.Background(), nil, nil, map[string]string{
+		"DOMAIN":     "example.com",
+		"RETURN_URI": "https://evil.test/phish",
+	})
+	if !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("virtual-key-return = %v, want ErrVirtualKeyReturnURI", err)
+	}
+	err = info.handler(context.Background(), nil, nil, map[string]string{
+		"DOMAIN":     "example.com",
+		"RETURN_URI": "https://example.com/finish-setup",
+	})
+	if !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("same-domain return_uri = %v, want ErrVirtualKeyReturnURI", err)
+	}
+}
+
+func TestVirtualKeyLinkCommandPrintsHostedURL(t *testing.T) {
+	t.Parallel()
+	info, ok := commands["virtual-key-link"]
+	if !ok {
+		t.Fatal("missing virtual-key-link")
+	}
+	if err := info.handler(context.Background(), nil, nil, map[string]string{"DOMAIN": "example.com"}); err != nil {
+		t.Fatalf("virtual-key-link: %v", err)
+	}
+	if err := info.handler(context.Background(), nil, nil, map[string]string{"DOMAIN": "https://evil.test"}); !errors.Is(err, protocol.ErrVirtualKeyReturnURI) {
+		t.Fatalf("virtual-key-link bad domain = %v", err)
 	}
 }

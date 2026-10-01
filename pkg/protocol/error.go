@@ -50,8 +50,18 @@ var (
 	ErrBadResponse          = errors.New("invalid response")
 	ErrProtocolNotSupported = errors.New("vehicle does not support protocol -- use REST API")
 	ErrRequiresBLE          = errors.New("command can only be sent over BLE")
-	ErrRequiresEncryption   = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
-	ErrNoDecryptionContext  = errors.New("could not decrypt vehicle response without a session")
+	// ErrVirtualKeyReturnURI indicates a client asked this SDK to change the
+	// Finish Setup button on Tesla's hosted virtual-key page
+	// (https://tesla.com/_ak/<domain>) or to append an arbitrary return_uri.
+	// That page is Tesla's website, not this repository. An unconstrained
+	// return URL is an open redirect. A Tesla collaborator said any redirect
+	// must stay on the registered partner domain and/or be configured in
+	// advance (teslamotors/vehicle-command#444). This SDK builds the
+	// enrollment link without a query string and does not host a substitute
+	// page.
+	ErrVirtualKeyReturnURI = NewError("the virtual key Finish Setup button is on Tesla's hosted https://tesla.com/_ak/<domain> page, not in this SDK. An unconstrained return_uri is an open redirect; any redirect must stay on the registered partner domain and be configured with Tesla in advance. This SDK does not append return_uri. See teslamotors/vehicle-command#444", false, false)
+	ErrRequiresEncryption  = errors.New("command should not be sent in plaintext or encrypted with an unauthenticated public key")
+	ErrNoDecryptionContext = errors.New("could not decrypt vehicle response without a session")
 	// ErrReplayedResponse indicates the client received multiple responses from the vehicle with
 	// the same response counter. This could be benign, as the network may have reattempted
 	// transmission.

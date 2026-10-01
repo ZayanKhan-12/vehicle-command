@@ -407,6 +407,27 @@ clock_time: 2650
 
 The session info fields are used to authorize commands.
 
+### Virtual key enrollment page
+
+`https://tesla.com/_ak/<domain>` is Tesla's hosted page for pairing a
+partner public key. `account.VirtualKeyInstallURL` builds that link from
+the registered hostname and does not add a query string. The Finish Setup
+button is part of Tesla's page. On a desktop browser it can return to the
+same page.
+
+This repository does not host that page and cannot retarget the button.
+An unconstrained `return_uri` (for example `?return_uri=https://other.example/finish`)
+is an open redirect. A Tesla collaborator said any such redirect must stay
+on the registered partner domain and/or be configured with Tesla in advance
+([issue #444](https://github.com/teslamotors/vehicle-command/issues/444)).
+Callers that ask this SDK to append `return_uri` get
+[`protocol.ErrVirtualKeyReturnURI`](error.go) from
+`tesla-control virtual-key-return` and proxy paths `virtual_key_return` /
+`ak_return_uri` / `set_virtual_key_return` (HTTP 400 before a session).
+`account.VirtualKeyReturnHostAllowed` reports whether an https URL's host
+is the partner domain or a subdomain. That check does not make Tesla's
+page follow the URL.
+
 ### Key Agreement
 
 The client and the vehicle derive a shared 128-bit AES-GCM key K using ECDH:

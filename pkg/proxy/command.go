@@ -69,6 +69,10 @@ func ExtractCommandAction(ctx context.Context, command string, params RequestPar
 		return func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, float32(volume)) }, nil
 	case "remote_boombox":
 		return nil, ErrCommandNotImplemented
+	case "virtual_key_return", "ak_return_uri", "set_virtual_key_return":
+		// https://tesla.com/_ak/<domain> is Tesla's hosted page. An
+		// unconstrained return_uri is an open redirect. teslamotors/vehicle-command#444.
+		return nil, protocol.ErrVirtualKeyReturnURI
 	case "media_next_fav":
 		return func(v *vehicle.Vehicle) error { return v.MediaNextFavorite(ctx) }, nil
 	case "media_prev_fav":

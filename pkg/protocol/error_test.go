@@ -1,7 +1,9 @@
 package protocol
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	universal "github.com/teslamotors/vehicle-command/pkg/protocol/protobuf/universalmessage"
@@ -116,5 +118,18 @@ func TestRetriableError(t *testing.T) {
 		if ShouldRetry(&err) != shouldRetry {
 			t.Errorf("Unexpected retry behavior for error %s", message)
 		}
+	}
+}
+
+func TestErrVirtualKeyReturnURI(t *testing.T) {
+	t.Parallel()
+	if Temporary(ErrVirtualKeyReturnURI) || MayHaveSucceeded(ErrVirtualKeyReturnURI) || ShouldRetry(ErrVirtualKeyReturnURI) {
+		t.Fatal("virtual key return_uri must not retry in Vehicle.Send")
+	}
+	if !errors.Is(fmt.Errorf("finish setup: %w", ErrVirtualKeyReturnURI), ErrVirtualKeyReturnURI) {
+		t.Fatal("callers must be able to errors.Is ErrVirtualKeyReturnURI")
+	}
+	if !strings.Contains(ErrVirtualKeyReturnURI.Error(), "#444") {
+		t.Fatal("error must cite teslamotors/vehicle-command#444")
 	}
 }

@@ -32,6 +32,9 @@ func TestExtractCommandAction(t *testing.T) {
 		{"adjust_volume", params, func(v *vehicle.Vehicle) error { return v.SetVolume(ctx, 0.0) }, nil},
 		{"adjust_volume", nil, nil, &protocol.NominalError{Details: fmt.Errorf("missing volume param")}},
 		{"remote_boombox", params, nil, proxy.ErrCommandNotImplemented},
+		{"virtual_key_return", proxy.RequestParameters{"return_uri": "https://evil.test/phish"}, nil, protocol.ErrVirtualKeyReturnURI},
+		{"ak_return_uri", proxy.RequestParameters{"return_uri": "https://example.com/finish-setup"}, nil, protocol.ErrVirtualKeyReturnURI},
+		{"set_virtual_key_return", nil, nil, protocol.ErrVirtualKeyReturnURI},
 		{"invalid_command", params, nil, &inet.HTTPError{Code: http.StatusBadRequest, Message: "{\"response\":null,\"error\":\"invalid_command\",\"error_description\":\"\"}"}},
 	}
 
