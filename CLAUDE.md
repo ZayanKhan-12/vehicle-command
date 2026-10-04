@@ -265,8 +265,9 @@ anyone can repeat; re-check before repeating the conclusion, because the protobu
 | Fan speed (#154) | none — `fan_status` is reported, not settable | none | Tesla roadmap |
 | Charging phase count (#205) | none — `charger_phases` is reported, not settable | none | Tesla roadmap |
 | Cabin body extras (#481) | none — see worked example below | none | Tesla roadmap |
+| Report incorrect speed limit (#514) | none — `speed_limit_*` is Speed Limit Mode | none | Tesla roadmap |
 
-Five of those seven have the report-but-not-command shape (or neither report nor command), so check
+Six of those eight have the report-but-not-command shape (or neither report nor command), so check
 for it every time. For #205 in particular, `set_charging_amps` is the lever that does exist, and the
 issue's own commenter notes `charger_phases` appears to reflect what the connected charger supports
 rather than a setting.
@@ -287,6 +288,24 @@ of the stated camping use case — say so rather than just declining:
 
 The same thread also asks for rear climate independent of front. That is a vehicle feature, not an
 API one, and a commenter on the issue has already said so.
+
+**Report incorrect speed limit (#514)** is the same shape as Summon, with a name collision that
+makes it look closer than it is. The request is an in-car UI action: tap the posted-limit icon
+in navigation and send "this map speed is wrong" (optionally with the correct value) so Tesla can
+update map data. Nothing in either protobuf domain, and nothing in the Fleet API vehicle-commands
+list, accepts a map-correction report.
+
+What *does* exist, and must not be offered as a substitute:
+
+- `DrivingSetSpeedLimitAction` / `DrivingSpeedLimitAction` / the parental-controls speed-limit
+  actions are **Speed Limit Mode** — a driver restriction with a PIN (`Vehicle.ActivateSpeedLimit`,
+  `Vehicle.SpeedLimitSetLimitMPH`, proxy `speed_limit_activate` / `speed_limit_set_limit`).
+- `SpeedLimitMode` in `vehicle.proto` reports whether that restriction is active and what its
+  limit is. It is not the posted road limit, and it is not a feedback channel to the map.
+
+The owner's manual page linked from the issue is Speed Assist in the vehicle UI. Changing that
+screen, and ingesting crowd-sourced limit corrections, is Tesla's map and firmware work. Do not
+add a guessed `VehicleAction` or a proxy command that pretends to file the report.
 
 ### Worked example: per-window control (issue #122)
 
