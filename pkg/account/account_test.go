@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/teslamotors/vehicle-command/pkg/protocol"
 	"golang.org/x/oauth2"
 )
 
@@ -50,6 +52,19 @@ func TestNewAccount(t *testing.T) {
 				t.Errorf("acct = %+v, expected Host = %s", acct, validDomain)
 			}
 		})
+	}
+}
+
+func TestNewAccountJWTAudienceIsNotPartnerOAuthProvisioning(t *testing.T) {
+	// teslamotors/vehicle-command#460: Tesla Fleet Auth invalid_audience is
+	// IdP provisioning. account.New "invalid audiences" is a malformed JWT
+	// aud claim on a token the caller already has.
+	_, err := New("x."+b64Encode("{\"aud\": \"example.com\"}")+".y", "")
+	if err == nil {
+		t.Fatal("untrusted JWT aud must fail")
+	}
+	if errors.Is(err, protocol.ErrPartnerOAuthNotProvisioned) {
+		t.Fatal("JWT aud parse errors must not be ErrPartnerOAuthNotProvisioned")
 	}
 }
 
