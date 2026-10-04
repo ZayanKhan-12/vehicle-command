@@ -11,3 +11,7 @@ examples/ble/ble
 *.DS_Store
 *.key
 config
+
+# Built by `go build ./cmd/tesla-key-check/` in the repo root during local checks.
+tesla-key-check
+cmd/tesla-key-check/tesla-key-check
